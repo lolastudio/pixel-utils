@@ -1,1 +1,1 @@
-import './hello-web/hello-web.js';
+import './drop-area/drop-area.js';
