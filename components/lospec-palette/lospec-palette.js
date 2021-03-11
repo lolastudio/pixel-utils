@@ -1,13 +1,11 @@
 import { LitElement, html, css } from '/web_modules/lit-element.js';
-import mock from '../../lospecmock.js';
 
 class LospecPalette extends LitElement {
 	constructor() {
 		super();
 		this.page = 0;
-		this.palettes = mock;
 
-		// this.getPalette();
+		this.getPalette();
 	}
 
 	static get styles() {
@@ -24,12 +22,32 @@ class LospecPalette extends LitElement {
 			:host p {
 				cursor: pointer;
 			}
+
+			:host .pagination {
+				display: flex;
+			}
+
+			:host .pagination .page {
+				width: 42px;
+				height: 52px;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				cursor: pointer;
+			}
+
+			:host .pagination .page.active {
+				font-weight: bold;
+			}
 		`;
 	}
 
 	render() {
 		return html`
 			${this.getList()}
+			<div class="pagination">
+				${this.getPagination()}
+			</div>
 		`;
 	}
 
@@ -39,9 +57,10 @@ class LospecPalette extends LitElement {
 	}
 
 	getPalette() {
-		fetch(`https://lospec.com/palette-list/load?colorNumberFilterType=any&page=${this.page}&tag=&sortingType=default`, { mode: 'no-cors' }).then(res => {
+		fetch(`http://localhost/lospec/palettes?colorNumberFilterType=any&page=${this.page}&tag=&sortingType=default`).then(res => {
 			res.json().then(data => {
 				this.palettes = data;
+				this.total_pages = Math.ceil(data.totalCount / data.palettes.length);
 				this.requestUpdate();
 			}).catch(err => {
 
@@ -50,19 +69,32 @@ class LospecPalette extends LitElement {
 	}
 
 	getList() {
-		let palettes = this.palettes.palettes;
-		let ret = []
-		for (let palette of palettes) {
-			ret.push(html`
-				<p @click=${() => { this.setPalette(palette) }}>${palette.title} (${palette.colorsArray.length} colors)</p>
-				<div class="color-preview">
-					${palette.colorsArray.map(color => html`<div class="color-preview-box" style="background: #${color}"></div>`)}
-					<br>
-					${palette.rgbaArray ? palette.rgbaArray.map(color => html`<div class="color-preview-box"
-						style="background: rgb(${color})"></div>`) : ''}
-				</div>
-			`)
+		if (this.palettes) {
+			let palettes = this.palettes.palettes;
+			let ret = []
+			for (let palette of palettes) {
+				ret.push(html`
+					<p @click=${()=> { this.setPalette(palette) }}>${palette.title} (${palette.colorsArray.length} colors)</p>
+					<div class="color-preview">
+						${palette.colorsArray.map(color => html`<div class="color-preview-box" style="background: #${color}"></div>`)}
+					</div>
+				`)
+			}
+
+			return ret;
 		}
+	}
+
+	getPagination() {
+		let actual = this.page + 1;
+		let total = this.total_pages + 1;
+		let ret = [];
+
+		for (let i = actual - 2; i <= actual + 2; i++) {
+			ret.push(html`<div class="page ${i == actual ? 'active' : ''}" @click=${()=> { this.setPage(i - 1) }}>${i}</div>`);
+		}
+
+		actual != total && ret.push(html`<div class="page" @click=${()=> { this.setPage(total - 1) }}>${total}</div>`);
 
 		return ret;
 	}

@@ -20,6 +20,8 @@ class CanvasRenderer extends LitElement {
 		this.setImages = this.setImages.bind(this);
 		this.animate = this.animate.bind(this);
 		this.setPalette = this.setPalette.bind(this);
+		this.zoomOut = this.zoomOut.bind(this);
+		this.zoomIn = this.zoomIn.bind(this);
 	}
 
 	static get styles() {
@@ -219,6 +221,16 @@ class CanvasRenderer extends LitElement {
 		this.colorMap = {};
 		this.mapped_quantized = {};
 		this.frame = 0;
+	}
+
+	zoomIn() {
+		this.zoom *= 2;
+		this.requestUpdate();
+	}
+
+	zoomOut() {
+		this.zoom /= 2;
+		this.requestUpdate();
 	}
 }
 

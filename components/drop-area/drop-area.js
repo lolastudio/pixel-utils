@@ -19,9 +19,9 @@ class DropArea extends LitElement {
 
 	render() {
 		return html`
-			<div class="container">
+			<form class="container">
 				<input type="file" multiple accept="image/*">
-			</div>
+			</form>
 			<p>Drop your images here!</p>
 		`;
 	}
