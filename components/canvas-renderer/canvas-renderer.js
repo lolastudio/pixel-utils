@@ -11,7 +11,7 @@ class CanvasRenderer extends LitElement {
 		this.mapped = {}, this.mapped_quantized = {}, this.cacheData = {}, this.colorMap = {};
 		this.images = [];
 		this.frame = 0, this.last_delta = 0;
-		this.fps = 24;
+		this.fps = 12;
 		this.tpf = 1e3 / this.fps;
 		this.max_colors = 24;
 		this.colorThief = new ColorThief();
@@ -36,16 +36,34 @@ class CanvasRenderer extends LitElement {
 				transform: scale(1);
 				transform-origin: 0 0;
 			}
+
+			:host .__hidden { 
+				display: none !important;
+			}
+
+			:host .container {
+				border-radius: 6px;
+				background: #fafafa;
+				padding: 20px;
+				display: flex;
+				align-items: center;
+				justify-content: center;	
+			}
 		`;
 	}
 
 	setImages(images) {
 		this.images = images;
+		window.animation_active = true;
+		window.on('updateApp');
+		this.requestUpdate();
 	}
 
 	render() {
 		return html`
-			<canvas></canvas>
+			<div class="container ${window.animation_active ? '' : '__hidden'}">
+				<canvas></canvas>
+			</div>
 		`;
 	}
 

@@ -9,10 +9,35 @@ class DropArea extends LitElement {
 	static get styles() {
 		return css`
 			:host .container {
+				opacity: .5;
 				border-radius: 6px;
-				border: 1px solid #c4c4c4;
-				padding: 40px;
+				padding: 60px 80px;
 				box-sizing: border-box;
+				text-align: center;
+				border: 3px dashed #f4a374;
+				border-radius: 6px;
+				transition: .2s ease-in-out all;
+			}
+
+			:host input {
+				display: none;
+			}
+
+			:host p {
+				margin: 0;
+				font-weight: bold;
+				font-size: 24px;
+			}
+
+			:host .hint {
+				font-weight: 300;
+				font-size: 18px;
+				margin-top: 10px;
+			}
+
+			:host form.is-dragover {
+				opacity: 1;
+				transition: .2s ease-in-out all;
 			}
 		`;
 	}
@@ -21,18 +46,22 @@ class DropArea extends LitElement {
 		return html`
 			<form class="container">
 				<input type="file" multiple accept="image/*">
+				<p>Drop your image(s) here!</p>
+				<p class="hint">(or click here for upload)</p>
 			</form>
-			<p>Drop your images here!</p>
 		`;
 	}
 
 	onDrop(e) {
-
+		e.preventDefault();
+		e.stopPropagation();
+		this.onFiles(e);
 	}
 
 	onFiles(e) {
-		for (let i = 0; i < e.target.files.length; i++) {
-			let src = URL.createObjectURL(e.target.files[i]);
+		let target = e.dataTransfer || e.target;
+		for (let i = 0; i < target.files.length; i++) {
+			let src = URL.createObjectURL(target.files[i]);
 			this.images.push(this.newImage(src));
 		}
 
@@ -41,8 +70,28 @@ class DropArea extends LitElement {
 	}
 
 	firstUpdated() {
-		this.shadowRoot.querySelector('.container').addEventListener('drop', this.onDrop);
+		let form = this.shadowRoot.querySelector('form');
+		this.shadowRoot.querySelector('.container').addEventListener('drop', this.onDrop.bind(this));
 		this.shadowRoot.querySelector('.container').addEventListener('change', this.onFiles.bind(this));
+
+		['drag', 'dragstart', 'dragend', 'dragover', 'dragenter', 'dragleave', 'drop'].forEach((event) => {
+			form.addEventListener(event, (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+			});
+		});
+
+		['dragover', 'dragenter'].forEach((event) => {
+			form.addEventListener(event, () => {
+				form.classList.add('is-dragover');
+			});
+		});
+
+		['dragleave', 'dragend', 'drop'].forEach((event) => {
+			form.addEventListener(event, () => {
+				form.classList.remove('is-dragover');
+			});
+		});
 	}
 
 	newImage(path) {

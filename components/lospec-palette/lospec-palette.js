@@ -4,12 +4,18 @@ class LospecPalette extends LitElement {
 	constructor() {
 		super();
 		this.page = 0;
+		this.active = false;
 
 		this.getPalette();
+		this.toggle = this.toggle.bind(this);
 	}
 
 	static get styles() {
 		return css`
+			:host * {
+				font-family: 'Montserrat', sans-serif;
+			}
+
 			:host .color-preview-box {
 				width: 12px;
 				height: 12px;
@@ -17,6 +23,7 @@ class LospecPalette extends LitElement {
 
 			:host .color-preview {
 				display: flex;
+				margin-top: 8px;
 			}
 
 			:host p {
@@ -39,14 +46,70 @@ class LospecPalette extends LitElement {
 			:host .pagination .page.active {
 				font-weight: bold;
 			}
+
+			:host .container {
+				display: none;
+				background: #2e2549;
+				border-radius: 6px;
+				height: 100%;
+				box-sizing: border-box;
+				padding: 20px;
+
+				position: fixed;
+				left: calc(2vh + 40px);
+				bottom: calc(2vh + 40px);
+				height: 80vh;
+				width: 25vw;
+				z-index: 1100;
+			}
+
+			:host .active {
+				display: flex;
+				flex-direction: column;
+			}
+
+			:host .list {
+				display: flex;
+				flex-direction: column;
+				height: 70vh;
+				overflow-y: scroll;
+				width: 100%;
+			}
+
+			:host p {
+				margin: 0;
+				font-size: 18px;
+				font-weight: bold;
+			}
+
+			:host a.user {
+				text-decoration: none;
+				color: #fffbd1;
+				font-size: 14px;
+			}
+
+			:host .item {
+				margin-bottom: 20px;
+				padding-left: 0;
+				transition: .2s ease all;
+			}
+
+			:host .item:hover {
+				padding-left: 20px;
+				transition: .2s ease all;
+			}
 		`;
 	}
 
 	render() {
 		return html`
-			${this.getList()}
-			<div class="pagination">
-				${this.getPagination()}
+			<div class="container ${this.active ? 'active' : ''}">
+				<div class="list">
+					${this.getList()}
+				</div>
+				<div class="pagination">
+					${this.getPagination()}
+				</div>
 			</div>
 		`;
 	}
@@ -61,6 +124,7 @@ class LospecPalette extends LitElement {
 			res.json().then(data => {
 				this.palettes = data;
 				this.total_pages = Math.ceil(data.totalCount / data.palettes.length);
+				this.shadowRoot.querySelector('.list').scrollTop = 0;
 				this.requestUpdate();
 			}).catch(err => {
 
@@ -74,9 +138,12 @@ class LospecPalette extends LitElement {
 			let ret = []
 			for (let palette of palettes) {
 				ret.push(html`
-					<p @click=${()=> { this.setPalette(palette) }}>${palette.title} (${palette.colorsArray.length} colors)</p>
-					<div class="color-preview">
-						${palette.colorsArray.map(color => html`<div class="color-preview-box" style="background: #${color}"></div>`)}
+					<div class="item" @click=${() => { this.setPalette(palette) }}>
+						<p>${palette.title} (${palette.colorsArray.length} colors)</p>
+						<a class="user" href="https://lospec.com/${palette.user?.slug}" target="_blank">${palette.user?.name}</a>
+						<div class="color-preview">
+							${palette.colorsArray.map(color => html`<div class="color-preview-box" style="background: #${color}"></div>`)}
+						</div>
 					</div>
 				`)
 			}
@@ -87,14 +154,14 @@ class LospecPalette extends LitElement {
 
 	getPagination() {
 		let actual = this.page + 1;
-		let total = this.total_pages + 1;
+		let total = new Array(this.total_pages);
 		let ret = [];
 
-		for (let i = actual - 2; i <= actual + 2; i++) {
-			ret.push(html`<div class="page ${i == actual ? 'active' : ''}" @click=${()=> { this.setPage(i - 1) }}>${i}</div>`);
-		}
+		if (actual > 1) { ret.push(html`<div class="page" @click=${() => { this.setPage(this.page - 1) }}>${actual - 1}</div>`); }
 
-		actual != total && ret.push(html`<div class="page" @click=${()=> { this.setPage(total - 1) }}>${total}</div>`);
+		for (let i = actual; i <= actual + 5; i++) {
+			ret.push(html`<div class="page ${i == actual ? 'active' : ''}" @click=${() => { this.setPage(i - 1) }}>${i}</div>`);
+		}
 
 		return ret;
 	}
@@ -119,6 +186,10 @@ class LospecPalette extends LitElement {
 		return aRgb;
 	}
 
+	toggle(state) {
+		this.active = state !== undefined ? state : !this.active;
+		this.requestUpdate();
+	}
 }
 
 customElements.define('lospec-palette', LospecPalette);
