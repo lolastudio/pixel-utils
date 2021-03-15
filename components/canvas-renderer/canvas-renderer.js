@@ -22,6 +22,8 @@ class CanvasRenderer extends LitElement {
 		this.setPalette = this.setPalette.bind(this);
 		this.zoomOut = this.zoomOut.bind(this);
 		this.zoomIn = this.zoomIn.bind(this);
+
+		window.addListener('fps_change', this.setFPS.bind(this));
 	}
 
 	static get styles() {
@@ -55,8 +57,19 @@ class CanvasRenderer extends LitElement {
 	setImages(images) {
 		this.images = images;
 		window.animation_active = true;
+		if (this.images.length < 12) {
+			this.setFPS(this.images.length);
+			window.on('fps_change', this.fps);
+		}
 		window.on('updateApp');
+
+		this.animate(this.last_delta, true);
 		this.requestUpdate();
+	}
+
+	setFPS(fps) {
+		this.fps = fps;
+		this.tpf = 1e3 / this.fps;
 	}
 
 	render() {
@@ -139,6 +152,8 @@ class CanvasRenderer extends LitElement {
 			this.classifyColors();
 			this.quantized = true;
 		}
+
+		this.animate(this.last_delta, true);
 	}
 
 	classifyColors() {
@@ -217,13 +232,17 @@ class CanvasRenderer extends LitElement {
 		});
 	}
 
-	animate(delta) {
-		window.requestAnimationFrame(this.animate);
+	animate(delta, jump) {
+		!jump && window.requestAnimationFrame(this.animate);
 
-		if (delta - this.last_delta >= this.tpf) {
+		if (delta - this.last_delta >= this.tpf || jump) {
 			this.frame++;
 			if (this.frame > this.images.length - 1) this.frame = 0;
 			this.draw(this.images[this.frame]);
+
+			window.on('frame', this.frame);
+			window.on('real_tpf', delta - this.last_delta);
+
 			this.last_delta = delta;
 		}
 	}
@@ -239,15 +258,18 @@ class CanvasRenderer extends LitElement {
 		this.colorMap = {};
 		this.mapped_quantized = {};
 		this.frame = 0;
+		this.animate(this.last_delta, true);
 	}
 
 	zoomIn() {
 		this.zoom *= 2;
+		this.animate(this.last_delta, true);
 		this.requestUpdate();
 	}
 
 	zoomOut() {
 		this.zoom /= 2;
+		this.animate(this.last_delta, true);
 		this.requestUpdate();
 	}
 }

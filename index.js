@@ -77,13 +77,19 @@ function drawApp() {
                 margin: 0;
                 width: 24px;
             }
+
+            .no-outline {
+                border: none;
+                outline: none;
+            }
         </style>
         <canvas-renderer></canvas-renderer>
+        <frame-control></frame-control>
         ${window.animation_active ? html`
         <lospec-palette></lospec-palette>
 
         <div class="fixed-buttons-left">
-            <button @click=${openPalettes}>Palettes</button>
+            <button class="no-outline" @click=${openPalettes}>Palettes</button>
         </div>
 
         <div class="fixed-buttons">

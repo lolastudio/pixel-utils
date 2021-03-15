@@ -19,11 +19,12 @@ class LospecPalette extends LitElement {
 			:host .color-preview-box {
 				width: 12px;
 				height: 12px;
+				cursor: pointer;
 			}
 
 			:host .color-preview {
 				display: flex;
-				margin-top: 8px;
+				margin-bottom: 8px;
 			}
 
 			:host p {
@@ -56,7 +57,7 @@ class LospecPalette extends LitElement {
 				padding: 20px;
 
 				position: fixed;
-				left: calc(2vh + 40px);
+				left: calc(2vh + 50px);
 				bottom: calc(2vh + 40px);
 				height: 80vh;
 				width: 25vw;
@@ -88,13 +89,24 @@ class LospecPalette extends LitElement {
 				font-size: 14px;
 			}
 
+			:host a.user:hover {
+				text-decoration: underline;	
+			}
+
 			:host .item {
 				margin-bottom: 20px;
 				padding-left: 0;
 				transition: .2s ease all;
 			}
-
+			
 			:host .item:hover {
+				cursor: pointer;
+				padding-left: 20px;
+				transition: .2s ease all;
+				transition-delay: .05s;
+			}
+
+			:host .item.active {
 				padding-left: 20px;
 				transition: .2s ease all;
 			}
@@ -138,12 +150,12 @@ class LospecPalette extends LitElement {
 			let ret = []
 			for (let palette of palettes) {
 				ret.push(html`
-					<div class="item" @click=${() => { this.setPalette(palette) }}>
-						<p>${palette.title} (${palette.colorsArray.length} colors)</p>
-						<a class="user" href="https://lospec.com/${palette.user?.slug}" target="_blank">${palette.user?.name}</a>
+					<div class="item ${this.selected?._id == palette._id ? 'active' : ''}" @click=${() => { this.setPalette(palette) }}>
 						<div class="color-preview">
 							${palette.colorsArray.map(color => html`<div class="color-preview-box" style="background: #${color}"></div>`)}
 						</div>
+						<p>${palette.title} (${palette.colorsArray.length} colors)</p>
+						<a title="Visit ${palette.user?.name} profile on lospec" class="user" href="https://lospec.com/${palette.user?.slug}" target="_blank">by ${palette.user?.name}</a>
 					</div>
 				`)
 			}
@@ -167,6 +179,8 @@ class LospecPalette extends LitElement {
 	}
 
 	setPalette(palette) {
+		this.selected = palette;
+		console.log(palette);
 		palette.rgbaArray = [];
 		for (let color of palette.colorsArray) {
 			color = this.hexToRgbA(color);
