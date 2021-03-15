@@ -100,12 +100,12 @@ class CanvasRenderer extends LitElement {
 
 						if (this.quantized) {
 							[r, g, b] = this.getQuantized(r, g, b);
-							let color = `rgba(${r},${g},${b},${a / 255})`;
+							let color = `rgba(${r},${g},${b},${1})`;
 							if (!this.mapped_quantized[img.id]) this.mapped_quantized[img.id] = {};
 							this.mapped_quantized[img.id][color] ? this.mapped_quantized[img.id][color].push({ x, y }) : this.mapped_quantized[img.id][color] = [{ x, y }];
 						}
 						else {
-							let color = `rgba(${r},${g},${b},${a / 255})`;
+							let color = `rgba(${r},${g},${b},${1})`;
 							this.mapped[img.id][color] ? this.mapped[img.id][color].push({ x, y }) : this.mapped[img.id][color] = [{ x, y }];
 						}
 					}
