@@ -11,7 +11,7 @@ class DropArea extends LitElement {
 			:host .container {
 				opacity: .5;
 				border-radius: 6px;
-				padding: 60px 80px;
+				padding: 6vw 12vh;
 				box-sizing: border-box;
 				text-align: center;
 				border: 3px dashed #f4a374;

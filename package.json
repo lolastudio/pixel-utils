@@ -9,7 +9,7 @@
   "version": "1.0.0",
   "author": "roquef",
   "scripts": {
-    "dev": "es-dev-server --app-index index.html --node-resolve --dedupe --watch --open",
+    "dev": "concurrently --kill-others \"es-dev-server --app-index index.html --node-resolve --dedupe --watch --open\" \"npm run server\"",
     "postinstall": "npx snowpack@2 install",
     "conjurate": "conjurate component ",
     "server": "node proxy.js"
@@ -22,6 +22,7 @@
     "request": "^2.88.2"
   },
   "devDependencies": {
+    "concurrently": "^6.0.0",
     "conjurate": "^0.6.0",
     "es-dev-server": "^1.54.0"
   }

@@ -117,6 +117,10 @@ class FrameControl extends LitElement {
 				flex-direction: column;
 				align-items: flex-end;
 			}
+
+			.__hidden {
+				display: none;
+			}
 		`;
 	}
 
@@ -125,7 +129,7 @@ class FrameControl extends LitElement {
 			<div class="list">
 				${this.getList()}
 			</div>
-			<div class="fps">
+			<div class="fps ${this.images.length ? '' : '__hidden'}">
 				<p>${this.fps} fps</p>
 				<!-- <p>real fps: ${this.rfps}</p> -->
 				<div class="buttons">
