@@ -15,6 +15,7 @@ class CanvasRenderer extends LitElement {
 		this.tpf = 1e3 / this.fps;
 		this.max_colors = 24;
 		this.colorThief = new ColorThief();
+		this.skip_frames = 2;
 
 		this.draw = this.draw.bind(this);
 		this.setImages = this.setImages.bind(this);
@@ -22,6 +23,7 @@ class CanvasRenderer extends LitElement {
 		this.setPalette = this.setPalette.bind(this);
 		this.zoomOut = this.zoomOut.bind(this);
 		this.zoomIn = this.zoomIn.bind(this);
+		this.renderGIF = this.renderGIF.bind(this);
 
 		window.addListener('fps_change', this.setFPS.bind(this));
 	}
@@ -87,7 +89,7 @@ class CanvasRenderer extends LitElement {
 	}
 
 	draw(img) {
-		this.checkImg(img).then(() => {
+		this.checkImg(img, () => {
 			this.updateCanvasSize(img);
 			this.tmpctx.clearRect(0, 0, img.width, img.height);
 			this.tmpctx.drawImage(img, 0, 0);
@@ -160,7 +162,7 @@ class CanvasRenderer extends LitElement {
 		let total = {}
 		for (let image of this.images) {
 			let colors = this.colorThief.getPalette(image, this.max_colors, 1);
-			for (let color of colors) {
+			for (let color of colors || []) {
 				let key = color.join(',');
 				if (!total[key]) total[key] = 0;
 				total[key]++;
@@ -219,8 +221,8 @@ class CanvasRenderer extends LitElement {
 		this.tmpcanvas.height = img.height;
 	}
 
-	checkImg(img) {
-		return new Promise((resolve, reject) => {
+	checkImg(img, resolve) {
+		// return new Promise((resolve, reject) => {
 			if (img) {
 				if (img.complete) {
 					resolve();
@@ -229,21 +231,45 @@ class CanvasRenderer extends LitElement {
 					img.onload = resolve;
 				}
 			}
-		});
+		// });
 	}
 
 	animate(delta, jump) {
 		!jump && window.requestAnimationFrame(this.animate);
 
-		if (delta - this.last_delta >= this.tpf || jump) {
-			this.frame++;
-			if (this.frame > this.images.length - 1) this.frame = 0;
-			this.draw(this.images[this.frame]);
+		if (this.rendering) { jump = true; }
+
+		if (!this.stopped && delta - this.last_delta >= this.tpf || jump) {
+			window.on('real_tpf', delta - this.last_delta);
+			this.last_delta = delta;
 
 			window.on('frame', this.frame);
-			window.on('real_tpf', delta - this.last_delta);
 
-			this.last_delta = delta;
+			this.draw(this.images[this.frame]);
+
+			if (this.frame === 0 && this.rendering) {
+				this.capturer.start();
+			}
+
+			this.frame += this.skip_frames;
+			if (this.frame > this.images.length - 1) {
+				this.frame = 0;
+
+				if (this.rendering) {
+					this.rendering = false;
+					this.stopped = true;
+
+					this.capturer.stop();
+					this.capturer.save();
+
+					console.log('end');
+				}
+			}
+			else {
+				if (this.rendering) {
+					this.capturer.capture(this.canvas);
+				}
+			}
 		}
 	}
 
@@ -271,6 +297,17 @@ class CanvasRenderer extends LitElement {
 		this.zoom /= 2;
 		this.animate(this.last_delta, true);
 		this.requestUpdate();
+	}
+
+	renderGIF() {
+		this.capturer = new CCapture({
+			framerate: this.fps,
+			format: 'gif',
+			workersPath: 'web_modules/',
+			quality: 10
+		});
+		this.frame = 0;
+		this.rendering = true;
 	}
 }
 

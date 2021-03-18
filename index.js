@@ -13,6 +13,10 @@ function zoomIn() {
     document.querySelector('canvas-renderer').zoomIn();
 }
 
+function renderGIF() {
+    document.querySelector('canvas-renderer').renderGIF();
+}
+
 function openPalettes() {
     setTimeout(() => {
         document.querySelector('lospec-palette').toggle();
@@ -99,7 +103,7 @@ function drawApp() {
         </div>
 
         <div class="fixed-buttons-right">
-            <button>Export GIF</button>
+            <button @click=${renderGIF}>Export GIF</button>
         </div>
 
         ` : html`<drop-area></drop-area>`}
