@@ -1,4 +1,5 @@
 import { LitElement, html, css } from '/web_modules/lit-element.js';
+import ciede2000 from '../diff.js';
 
 class CanvasRenderer extends LitElement {
 	constructor() {
@@ -115,12 +116,12 @@ class CanvasRenderer extends LitElement {
 
 						if (this.quantized) {
 							[r, g, b] = this.getQuantized(r, g, b);
-							let color = `rgba(${r},${g},${b},${1})`;
+							let color = `rgba(${r},${g},${b},${this.background ? 1 : a})`;
 							if (!this.mapped_quantized[img.id]) this.mapped_quantized[img.id] = {};
 							this.mapped_quantized[img.id][color] ? this.mapped_quantized[img.id][color].push({ x, y }) : this.mapped_quantized[img.id][color] = [{ x, y }];
 						}
 						else {
-							let color = `rgba(${r},${g},${b},${1})`;
+							let color = `rgba(${r},${g},${b},${this.background ? 1 : a})`;
 							this.mapped[img.id][color] ? this.mapped[img.id][color].push({ x, y }) : this.mapped[img.id][color] = [{ x, y }];
 						}
 					}
@@ -191,11 +192,14 @@ class CanvasRenderer extends LitElement {
 
 	getQuantized(r, g, b) {
 		let key = `${r},${g},${b}`;
+
 		if (!this.colorMap[key]) {
 			let scores = {};
 			for (let i = 0; i < this.max_colors; i++) {
 				let q = this.colors_ordered[i].color.split(',');
-				scores[this.colors_ordered[i].color] = Math.abs(r - +q[0]) + Math.abs(g - +q[1]) + Math.abs(b - +q[1]);
+				// scores[this.colors_ordered[i].color] = Math.abs(r - +q[0]) + Math.abs(g - +q[1]) + Math.abs(b - +q[2]);
+				scores[this.colors_ordered[i].color] = ciede2000({ r, g, b }, { r: +q[0], g: +q[1], b: +q[2] })
+				// return console.log(ciede2000({ r, g, b }, { r: +q[0], g: +q[1], b: +q[2] }));
 			}
 
 			let quantized = { color: `${r},${g},${b}`, total: Infinity };
@@ -206,7 +210,7 @@ class CanvasRenderer extends LitElement {
 			}
 
 			let split = quantized.color.split(',');
-			this.colorMap[key] = split
+			this.colorMap[key] = split;
 			return split;
 		}
 		else {
@@ -223,14 +227,14 @@ class CanvasRenderer extends LitElement {
 
 	checkImg(img, resolve) {
 		// return new Promise((resolve, reject) => {
-			if (img) {
-				if (img.complete) {
-					resolve();
-				}
-				else {
-					img.onload = resolve;
-				}
+		if (img) {
+			if (img.complete) {
+				resolve();
 			}
+			else {
+				img.onload = resolve;
+			}
+		}
 		// });
 	}
 

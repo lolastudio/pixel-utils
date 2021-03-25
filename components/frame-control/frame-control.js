@@ -52,6 +52,8 @@ class FrameControl extends LitElement {
 
 			img {
 				opacity: .5;
+				box-sizing: border-box;
+				padding: 10px;
 			}
 
 			.active {
@@ -121,6 +123,11 @@ class FrameControl extends LitElement {
 			.__hidden {
 				display: none;
 			}
+
+			:host .img-container {
+				min-width: 98px;
+				min-height: 98px;
+			}
 		`;
 	}
 
@@ -144,10 +151,10 @@ class FrameControl extends LitElement {
 		let ret = [];
 
 		for (let i = 0; i < this.images.length; i++) {
-			ret.push(html`<img src="${this.images[i].src}" class="${this.actual_frame == i ? 'active' : ''}" />`)
+			ret.push(html`<div class="img-container"><img src="${this.images[i].src}" class="${this.actual_frame == i ? 'active' : ''}" /></div>`)
 		}
 
-		let width = this.shadowRoot.querySelector('img')?.width;
+		let width = this.shadowRoot.querySelector('.img-container')?.clientWidth;
 		if (width) {
 			let extra = Math.floor(((window.innerWidth * .8) / width) / 2); // max-width of .list 80vw
 			let item = html`
@@ -167,8 +174,9 @@ class FrameControl extends LitElement {
 	}
 
 	setOffset() {
+		let width = +this.shadowRoot.querySelector('.img-container')?.clientWidth || 0;
 		this.shadowRoot.querySelector('.list').scroll({
-			left: (this.actual_frame * this.shadowRoot.querySelector('img')?.offsetWidth) - 12 || 0,
+			left: ((this.actual_frame * width) - (width / 4)) || 0,
 			top: 0,
 			// behavior: 'smooth'
 		});

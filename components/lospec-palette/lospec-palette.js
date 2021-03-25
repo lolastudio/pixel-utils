@@ -8,12 +8,13 @@ class LospecPalette extends LitElement {
 
 		this.getPalette();
 		this.toggle = this.toggle.bind(this);
+		this.max_colors = 20;
 	}
 
 	static get styles() {
 		return css`
 			:host * {
-				font-family: 'Montserrat', sans-serif;
+				font-family: 'Fredoka One', sans-serif;
 			}
 
 			:host .color-preview-box {
@@ -76,6 +77,10 @@ class LospecPalette extends LitElement {
 				overflow-y: scroll;
 				width: 100%;
 			}
+			
+			:host .item p {
+				font-family: 'Montserrat', sans-serif;
+			}
 
 			:host p {
 				margin: 0;
@@ -132,7 +137,7 @@ class LospecPalette extends LitElement {
 	}
 
 	getPalette() {
-		fetch(`http://localhost/lospec/palettes?colorNumberFilterType=any&page=${this.page}&tag=&sortingType=default`).then(res => {
+		fetch(`http://localhost/lospec/palettes?colorNumberFilterType=min&page=${this.page}&tag=&sortingType=default&colorNumber=0`).then(res => {
 			res.json().then(data => {
 				this.palettes = data;
 				this.total_pages = Math.ceil(data.totalCount / data.palettes.length);
@@ -150,12 +155,13 @@ class LospecPalette extends LitElement {
 			let ret = []
 			for (let palette of palettes) {
 				ret.push(html`
-					<div class="item ${this.selected?._id == palette._id ? 'active' : ''}" @click=${() => { this.setPalette(palette) }}>
+					<div class="item ${this.selected?._id == palette._id ? 'active' : ''}" @click=${()=> { this.setPalette(palette) }}>
 						<div class="color-preview">
 							${palette.colorsArray.map(color => html`<div class="color-preview-box" style="background: #${color}"></div>`)}
 						</div>
 						<p>${palette.title} (${palette.colorsArray.length} colors)</p>
-						<a title="Visit ${palette.user?.name} profile on lospec" class="user" href="https://lospec.com/${palette.user?.slug}" target="_blank">by ${palette.user?.name}</a>
+						<a title="Visit ${palette.user?.name} profile on lospec" class="user"
+							href="https://lospec.com/${palette.user?.slug}" target="_blank">by ${palette.user?.name}</a>
 					</div>
 				`)
 			}
@@ -169,10 +175,10 @@ class LospecPalette extends LitElement {
 		let total = new Array(this.total_pages);
 		let ret = [];
 
-		if (actual > 1) { ret.push(html`<div class="page" @click=${() => { this.setPage(this.page - 1) }}>${actual - 1}</div>`); }
+		if (actual > 1) { ret.push(html`<div class="page" @click=${()=> { this.setPage(this.page - 1) }}>${actual - 1}</div>`); }
 
 		for (let i = actual; i <= actual + 5; i++) {
-			ret.push(html`<div class="page ${i == actual ? 'active' : ''}" @click=${() => { this.setPage(i - 1) }}>${i}</div>`);
+			ret.push(html`<div class="page ${i == actual ? 'active' : ''}" @click=${()=> { this.setPage(i - 1) }}>${i}</div>`);
 		}
 
 		return ret;

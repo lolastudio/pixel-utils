@@ -17,6 +17,7 @@ class DropArea extends LitElement {
 				border: 3px dashed #f4a374;
 				border-radius: 6px;
 				transition: .2s ease-in-out all;
+				cursor: pointer;
 			}
 
 			:host input {
@@ -27,15 +28,22 @@ class DropArea extends LitElement {
 				margin: 0;
 				font-weight: bold;
 				font-size: 24px;
+				letter-spacing: 4px;
 			}
 
 			:host .hint {
 				font-weight: 300;
 				font-size: 18px;
-				margin-top: 10px;
+				margin-top: 16px;
+				opacity: .9;
 			}
 
 			:host form.is-dragover {
+				opacity: 1;
+				transition: .2s ease-in-out all;
+			}
+
+			:host form:hover {
 				opacity: 1;
 				transition: .2s ease-in-out all;
 			}
@@ -44,12 +52,18 @@ class DropArea extends LitElement {
 
 	render() {
 		return html`
-			<form class="container">
+			<form class="container" @click=${this.openUpload}>
 				<input type="file" multiple accept="image/*">
 				<p>Drop your image(s) here!</p>
 				<p class="hint">(or click here for upload)</p>
 			</form>
 		`;
+	}
+
+	openUpload() {
+		if(!this.images.length) {
+			this.shadowRoot.querySelector('input').click();
+		}
 	}
 
 	onDrop(e) {
