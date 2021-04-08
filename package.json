@@ -12,7 +12,8 @@
     "dev": "concurrently --kill-others \"es-dev-server --app-index index.html --node-resolve --dedupe --watch --open\" \"npm run server\"",
     "postinstall": "npx snowpack@2 install",
     "conjurate": "conjurate component ",
-    "server": "node proxy.js"
+    "server": "node proxy.js",
+    "dev:webapp": "es-dev-server --app-index index.html --node-resolve --dedupe --watch --open"
   },
   "dependencies": {
     "cors": "^2.8.5",

@@ -8,12 +8,16 @@ const cache = {};
 app.get('/lospec/palettes', (req, res) => {
     let url = 'https://lospec.com/palette-list/load?' + query2string(req.query);
     cache[url] ? res.send(cache[url]) : request.get(url, (err, res, body) => {
-        cache[url] = JSON.parse(body);
+        try {
+            cache[url] = JSON.parse(body);
+        } catch(err) { }
     }).pipe(res);
 });
 
-app.listen(80, () => {
-    console.log(`@80`);
+app.use(express.static('./'))
+
+app.listen(420, () => {
+    console.log(`@420`);
 });
 
 function query2string(query) {

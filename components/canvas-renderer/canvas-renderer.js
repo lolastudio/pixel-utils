@@ -26,6 +26,8 @@ class CanvasRenderer extends LitElement {
 		this.zoomIn = this.zoomIn.bind(this);
 		this.renderGIF = this.renderGIF.bind(this);
 
+		this.background = false;
+
 		window.addListener('fps_change', this.setFPS.bind(this));
 	}
 

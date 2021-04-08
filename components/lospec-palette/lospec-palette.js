@@ -137,7 +137,7 @@ class LospecPalette extends LitElement {
 	}
 
 	getPalette() {
-		fetch(`http://localhost/lospec/palettes?colorNumberFilterType=min&page=${this.page}&tag=&sortingType=default&colorNumber=0`).then(res => {
+		fetch(`https://pixelutils.lolastud.io/lospec/palettes?colorNumberFilterType=min&page=${this.page}&tag=&sortingType=default&colorNumber=0`).then(res => {
 			res.json().then(data => {
 				this.palettes = data;
 				this.total_pages = Math.ceil(data.totalCount / data.palettes.length);
