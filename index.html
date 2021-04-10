@@ -5,11 +5,13 @@
 	<meta charset="UTF-8">
 	<title>Pixel Utils - GIF Maker</title>
 	<link rel="preconnect" href="https://fonts.gstatic.com">
-	<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@100;300;400;500;700;900&display=swap" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@100;300;400;500;700;900&display=swap"
+		rel="stylesheet">
 	<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap" rel="stylesheet">
 	<style>
 		body,
-		html {
+		html,
+		.app {
 			width: 100vw;
 			height: 100vh;
 			overflow: hidden;
@@ -18,7 +20,8 @@
 			box-sizing: border-box;
 		}
 
-		body {
+		body,
+		.app {
 			display: flex;
 			align-items: center;
 			justify-content: center;
@@ -29,14 +32,46 @@
 			color: #fffbd1;
 			font-family: 'Fredoka One', sans-serif;
 		}
+
+		.version {
+			position: fixed;
+			bottom: 15px;
+			right: 15px;
+		}
+
+		.overlayer-loader {
+			position: fixed;
+			width: 100vw;
+			height: 100vh;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			z-index: 1000;
+			background: rgba(0, 0, 0, .75);
+			opacity: 1;
+			transition: all .2s ease;
+		}
+
+		.overlayer-loader.__hidden {
+			opacity: 0;
+			transition: all .2s ease;
+			z-index: -1;
+		}
 	</style>
 </head>
 
 <body>
+	<div class="overlayer-loader __hidden">
+		<svg-loader></svg-loader>
+	</div>
+	<div class="js-version version"></div>
+	<div class="app"></div>
 </body>
 
 <script src="./web_modules/CCapture.all.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.0/color-thief.umd.js"></script>
 <script src="index.js" type="module"></script>
+<script src="utils.js" async defer></script>
+<script src="version.js" async defer></script>
 
 </html>

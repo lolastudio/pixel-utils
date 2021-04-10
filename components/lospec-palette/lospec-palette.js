@@ -9,6 +9,7 @@ class LospecPalette extends LitElement {
 		this.getPalette();
 		this.toggle = this.toggle.bind(this);
 		this.max_colors = 20;
+		this.loading = false;
 	}
 
 	static get styles() {
@@ -46,7 +47,9 @@ class LospecPalette extends LitElement {
 			}
 
 			:host .pagination .page.active {
-				font-weight: bold;
+				font-weight: bolder;
+    			font-size: 24px;
+    			transition: .2s ease all;
 			}
 
 			:host .container {
@@ -58,7 +61,7 @@ class LospecPalette extends LitElement {
 				padding: 20px;
 
 				position: fixed;
-				left: calc(2vh + 50px);
+				left: calc(2vh + 30px);
 				bottom: calc(2vh + 40px);
 				height: 80vh;
 				width: 25vw;
@@ -75,6 +78,16 @@ class LospecPalette extends LitElement {
 				flex-direction: column;
 				height: 70vh;
 				overflow-y: scroll;
+				width: 100%;
+				overflow-x: hidden;
+			}
+
+			:host .loader-container {
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				justify-content: center;
+				height: 70vh;
 				width: 100%;
 			}
 			
@@ -121,18 +134,22 @@ class LospecPalette extends LitElement {
 	render() {
 		return html`
 			<div class="container ${this.active ? 'active' : ''}">
-				<div class="list">
+				${this.loading ? html`<div class="loader-container">
+					<svg-loader></svg-loader>
+				</div>` : html`<div class="list">
 					${this.getList()}
 				</div>
 				<div class="pagination">
 					${this.getPagination()}
-				</div>
+				</div>`}
 			</div>
 		`;
 	}
 
 	setPage(page) {
 		this.page = page;
+		this.loading = true;
+		this.requestUpdate();
 		this.getPalette();
 	}
 
@@ -141,10 +158,12 @@ class LospecPalette extends LitElement {
 			res.json().then(data => {
 				this.palettes = data;
 				this.total_pages = Math.ceil(data.totalCount / data.palettes.length);
-				this.shadowRoot.querySelector('.list').scrollTop = 0;
+				this.loading = false;
 				this.requestUpdate();
 			}).catch(err => {
-
+				console.log(err);
+				this.loading = false;
+				this.requestUpdate();
 			});
 		})
 	}
@@ -155,9 +174,9 @@ class LospecPalette extends LitElement {
 			let ret = []
 			for (let palette of palettes) {
 				ret.push(html`
-					<div class="item ${this.selected?._id == palette._id ? 'active' : ''}" @click=${()=> { this.setPalette(palette) }}>
+					<div class="item ${this.selected?._id == palette._id ? 'active' : ''}" @click=${() => { this.setPalette(palette) }}>
 						<div class="color-preview">
-							${palette.colorsArray.map(color => html`<div class="color-preview-box" style="background: #${color}"></div>`)}
+							${palette.colorsArray.map(color => html`<div class="color-preview-box" style="background: #${color};"></div>`)}
 						</div>
 						<p>${palette.title} (${palette.colorsArray.length} colors)</p>
 						<a title="Visit ${palette.user?.name} profile on lospec" class="user"
@@ -175,10 +194,10 @@ class LospecPalette extends LitElement {
 		let total = new Array(this.total_pages);
 		let ret = [];
 
-		if (actual > 1) { ret.push(html`<div class="page" @click=${()=> { this.setPage(this.page - 1) }}>${actual - 1}</div>`); }
+		if (actual > 1) { ret.push(html`<div class="page" @click=${() => { this.setPage(this.page - 1) }}>${actual - 1}</div>`); }
 
 		for (let i = actual; i <= actual + 5; i++) {
-			ret.push(html`<div class="page ${i == actual ? 'active' : ''}" @click=${()=> { this.setPage(i - 1) }}>${i}</div>`);
+			ret.push(html`<div class="page ${i == actual ? 'active' : ''}" @click=${() => { this.setPage(i - 1) }}>${i}</div>`);
 		}
 
 		return ret;
@@ -209,6 +228,10 @@ class LospecPalette extends LitElement {
 	toggle(state) {
 		this.active = state !== undefined ? state : !this.active;
 		this.requestUpdate();
+	}
+
+	updated() {
+		this.shadowRoot.querySelector('.list').scrollTop = 0;
 	}
 }
 

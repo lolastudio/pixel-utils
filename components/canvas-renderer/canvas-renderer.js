@@ -17,6 +17,7 @@ class CanvasRenderer extends LitElement {
 		this.max_colors = 24;
 		this.colorThief = new ColorThief();
 		this.skip_frames = 2;
+		this.active = true;
 
 		this.draw = this.draw.bind(this);
 		this.setImages = this.setImages.bind(this);
@@ -25,10 +26,18 @@ class CanvasRenderer extends LitElement {
 		this.zoomOut = this.zoomOut.bind(this);
 		this.zoomIn = this.zoomIn.bind(this);
 		this.renderGIF = this.renderGIF.bind(this);
+		this.saveFrame = this.saveFrame.bind(this);
+		this.setFrame = this.setFrame.bind(this);
+		this.setPlayerState = this.setPlayerState.bind(this);
 
 		this.background = false;
 
 		window.addListener('fps_change', this.setFPS.bind(this));
+		window.addListener('skip_frames_change', this.setSkip.bind(this));
+		window.addListener('background_change', value => { 
+			this.background = value;
+			this.mapped_quantized = {};
+		});
 	}
 
 	static get styles() {
@@ -75,6 +84,10 @@ class CanvasRenderer extends LitElement {
 	setFPS(fps) {
 		this.fps = fps;
 		this.tpf = 1e3 / this.fps;
+	}
+
+	setSkip(skip) {
+		this.skip_frames = skip;
 	}
 
 	render() {
@@ -149,16 +162,26 @@ class CanvasRenderer extends LitElement {
 		}
 	}
 
-	quantize() {
-		if (this.classified) {
-			this.quantized = true;
-		}
-		else {
-			this.classifyColors();
-			this.quantized = true;
-		}
+	quantize(cb) {
+		window.showLoader(() => {
+			if (this.classified) {
+				this.quantized = true;
+			}
+			else {
+				this.classifyColors();
+				this.quantized = true;
+			}
 
-		this.animate(this.last_delta, true);
+			if (cb) {
+				try {
+					cb();
+				} catch (err) { }
+			}
+
+			window.hideLoader();
+
+			this.animate(this.last_delta, true);
+		});
 	}
 
 	classifyColors() {
@@ -179,7 +202,7 @@ class CanvasRenderer extends LitElement {
 		let ordered = [];
 		for (let color in colors) {
 			let total = colors[color];
-			ordered.push({ color, total });
+			ordered.push({ color, total, array_color: color.split(',') });
 		}
 
 		ordered.sort((a, b) => {
@@ -193,18 +216,17 @@ class CanvasRenderer extends LitElement {
 	}
 
 	getQuantized(r, g, b) {
-		let key = `${r},${g},${b}`;
+		let key = [r, g, b].join(',');
+		let mapped = this.colorMap[key]
 
-		if (!this.colorMap[key]) {
+		if (!mapped) {
 			let scores = {};
 			for (let i = 0; i < this.max_colors; i++) {
-				let q = this.colors_ordered[i].color.split(',');
-				// scores[this.colors_ordered[i].color] = Math.abs(r - +q[0]) + Math.abs(g - +q[1]) + Math.abs(b - +q[2]);
-				scores[this.colors_ordered[i].color] = ciede2000({ r, g, b }, { r: +q[0], g: +q[1], b: +q[2] })
-				// return console.log(ciede2000({ r, g, b }, { r: +q[0], g: +q[1], b: +q[2] }));
+				let q = this.colors_ordered[i].array_color;
+				scores[this.colors_ordered[i].color] = ciede2000({ r, g, b }, { r: +q[0], g: +q[1], b: +q[2] });
 			}
 
-			let quantized = { color: `${r},${g},${b}`, total: Infinity };
+			let quantized = { color: [r, g, b].join(','), total: Infinity };
 			for (let key in scores) {
 				if (scores[key] < quantized.total) {
 					quantized = { color: key, total: scores[key] };
@@ -216,7 +238,7 @@ class CanvasRenderer extends LitElement {
 			return split;
 		}
 		else {
-			return this.colorMap[key];
+			return mapped;
 		}
 	}
 
@@ -257,7 +279,8 @@ class CanvasRenderer extends LitElement {
 				this.capturer.start();
 			}
 
-			this.frame += this.skip_frames;
+			if(!jump && this.active) this.frame += this.skip_frames;
+
 			if (this.frame > this.images.length - 1) {
 				this.frame = 0;
 
@@ -268,7 +291,7 @@ class CanvasRenderer extends LitElement {
 					this.capturer.stop();
 					this.capturer.save();
 
-					console.log('end');
+					window.hideLoader();
 				}
 			}
 			else {
@@ -280,17 +303,28 @@ class CanvasRenderer extends LitElement {
 	}
 
 	setPalette(palette) {
-		let new_colors = [];
-		for (let color of palette) {
-			new_colors.push({ color, total: 1 });
+		if (!this.quantized) {
+			this.quantize(() => {
+				this.setPalette(palette);
+			});
 		}
+		else {
+			window.showLoader(() => {
+				let new_colors = [];
+				for (let color of palette) {
+					new_colors.push({ color, total: 1, array_color: color.split(',') });
+				}
 
-		this.colors_ordered = new_colors;
-		this.max_colors = palette.length;
-		this.colorMap = {};
-		this.mapped_quantized = {};
-		this.frame = 0;
-		this.animate(this.last_delta, true);
+				this.colors_ordered = new_colors;
+				this.max_colors = palette.length;
+				this.colorMap = {};
+				this.mapped_quantized = {};
+				// this.frame = 0;
+
+				window.hideLoader();
+				this.animate(this.last_delta, true);
+			});
+		}
 	}
 
 	zoomIn() {
@@ -306,14 +340,37 @@ class CanvasRenderer extends LitElement {
 	}
 
 	renderGIF() {
+		window.showLoader();
 		this.capturer = new CCapture({
 			framerate: this.fps,
 			format: 'gif',
 			workersPath: 'web_modules/',
-			quality: 10
+			quality: 10,
+			name: `pixel_utils_${window.getDate()}`
 		});
 		this.frame = 0;
 		this.rendering = true;
+	}
+
+	saveFrame() {
+		window.showLoader(() => {
+			let image = this.canvas.toDataURL('image/png').replace('image/png', 'image/octet-stream');
+			let link = document.createElement('a');
+			link.setAttribute('download', `pixel_utils_${window.getDate()}.png`);
+			link.setAttribute('href', image);
+			link.click();
+
+			window.hideLoader();
+		});
+	}
+
+	setFrame(frame) {
+		this.frame = frame;
+		this.animate(this.last_delta, true);
+	}
+
+	setPlayerState(state) {
+		this.active = state;
 	}
 }
 

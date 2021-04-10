@@ -6,7 +6,7 @@
     "lit-html",
     "lit-starter"
   ],
-  "version": "1.0.0",
+  "version": "0.1.0",
   "author": "roquef",
   "scripts": {
     "dev": "concurrently --kill-others \"es-dev-server --app-index index.html --node-resolve --dedupe --watch --open\" \"npm run server\"",

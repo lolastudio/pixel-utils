@@ -9,6 +9,7 @@ class FrameControl extends LitElement {
 
 		this.fps = 12;
 		this.tpf = 1e3 / this.fps;
+		this.skip_frames = 2;
 
 		this.images = [];
 
@@ -17,6 +18,12 @@ class FrameControl extends LitElement {
 		})
 
 		window.addListener('fps_change', this.setFPS.bind(this));
+	}
+
+	static get properties() {
+		return {
+			active: Boolean
+		}
 	}
 
 	static get styles() {
@@ -33,7 +40,7 @@ class FrameControl extends LitElement {
 			}
 
 			.list {
-				height: 10vh;
+				height: 98px;
 				overflow-x: scroll;
 				display: flex;
 				box-sizing: border-box;
@@ -51,24 +58,37 @@ class FrameControl extends LitElement {
 			}
 
 			img {
-				opacity: .5;
+				opacity: .3;
 				box-sizing: border-box;
-				padding: 10px;
+				width: 100%;
+				height: 100%;
+				object-fit: cover;
+				border-radius: 5px;
 			}
 
 			.active {
-				background: #fafafa;
+				// background: #fafafa;
 				border-radius: 5px;
+			}
+
+			.active img {
 				opacity: 1;
 			}
 
-			.fps {
+			.fps, .skip-frame {
 				position: fixed;
 				display: flex;
 				flex-direction: column;
-				right: 2vh;
 				top: 2vh;
-				padding: 40px;
+				padding: 50px 30px;
+			}
+
+			.fps {
+				right: 2vh;
+			}
+
+			.skip-frame {
+				left: 2vh;
 			}
 
 			button {
@@ -106,9 +126,9 @@ class FrameControl extends LitElement {
 				margin: 0;
 			}
 
-			.fps p {
-				text-align: right;
-				margin-right: 12px;
+			.fps p, .skip-frame p {
+				width: 100%;
+				text-align: center;
 				font-size: 20px;
 				text-transform: uppercase;
 				font-weight: bold;
@@ -116,8 +136,14 @@ class FrameControl extends LitElement {
 
 			.buttons {
 				display: flex;
-				flex-direction: column;
-				align-items: flex-end;
+				flex-direction: row;
+				justify-content: space-around;
+				width: 102px;
+				margin-top: 10px;
+			}
+
+			.buttons button {
+				margin: 0;
 			}
 
 			.__hidden {
@@ -127,23 +153,51 @@ class FrameControl extends LitElement {
 			:host .img-container {
 				min-width: 98px;
 				min-height: 98px;
+				padding: 10px;
+				box-sizing: border-box;
+				position: relative;
+			}
+
+			.img-container:hover {
+				cursor: pointer;
+			}
+
+			.img-container:hover img {
+				opacity: 1;
+			}
+
+			.img-container p {
+				position: absolute;
+				width: 100%;
+				text-align: center;
+				bottom: 0;
+				margin: 0;
+				margin-left: -10px;
 			}
 		`;
 	}
 
 	render() {
 		return html`
+			<div class="skip-frame ${this.images.length > 1 ? '' : '__hidden'}">
+				<p>skip ${this.skip_frames - 1}</p>
+				<div class="buttons">
+					<button class="round __small" @click=${this.subSkip}>-</button>
+					<button class="round __small" @click=${this.addSkip}>+</button>
+				</div>
+			</div>
 			<div class="list">
 				${this.getList()}
 			</div>
-			<div class="fps ${this.images.length ? '' : '__hidden'}">
+			<div class="fps ${this.images.length > 1 ? '' : '__hidden'}">
 				<p>${this.fps} fps</p>
 				<!-- <p>real fps: ${this.rfps}</p> -->
 				<div class="buttons">
-					<button class="round" @click=${this.addFPS}>+</button>
 					<button class="round" @click=${this.subFPS}>-</button>
+					<button class="round" @click=${this.addFPS}>+</button>
 				</div>
 			</div>
+
 		`;
 	}
 
@@ -151,15 +205,17 @@ class FrameControl extends LitElement {
 		let ret = [];
 
 		for (let i = 0; i < this.images.length; i++) {
-			ret.push(html`<div class="img-container"><img src="${this.images[i].src}" class="${this.actual_frame == i ? 'active' : ''}" /></div>`)
+			ret.push(html`<div @click=${() => { this.setFrame(i, true)} } class="img-container ${this.actual_frame == i ? 'active' : ''}">
+				<img src="${this.images[i].src}" />
+				<p>${i + 1}</p>
+			</div>`)
 		}
 
 		let width = this.shadowRoot.querySelector('.img-container')?.clientWidth;
 		if (width) {
-			let extra = Math.floor(((window.innerWidth * .8) / width) / 2); // max-width of .list 80vw
-			let item = html`
-				<div style="min-width: ${width}px;" class="extra"></div>
-			`;
+			let extra = Math.floor(((window.innerWidth * .8) / width) / 2);
+			let item = html`<div class="extra" style="min-width: ${width}px;"></div>`;
+
 			for (let i = 0; i < extra; i++) {
 				ret.unshift(item);
 				ret.push(item);
@@ -192,9 +248,23 @@ class FrameControl extends LitElement {
 
 	subFPS() {
 		this.fps -= 1;
+		this.fps = this.fps > 0 ? this.fps : 0;
 		this.tpf = 1e3 / this.fps;
 
 		window.on('fps_change', this.fps);
+		this.requestUpdate();
+	}
+
+	addSkip() {
+		this.skip_frames += 1;
+		window.on('skip_frames_change', this.skip_frames);
+		this.requestUpdate();
+	}
+
+	subSkip() {
+		this.skip_frames -= 1;
+		this.skip_frames = this.skip_frames > 1 ? this.skip_frames : 1;
+		window.on('skip_frames_change', this.skip_frames);
 		this.requestUpdate();
 	}
 
@@ -203,8 +273,13 @@ class FrameControl extends LitElement {
 		this.tpf = 1e3 / this.fps;
 	}
 
-	setFrame(id) {
+	setFrame(id, emit) {
 		this.actual_frame = id;
+
+		if(emit) {
+			window.on('frame_set', id);
+		}
+
 		this.requestUpdate();
 	}
 
