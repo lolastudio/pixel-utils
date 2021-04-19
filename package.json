@@ -9,11 +9,11 @@
   "version": "0.1.0",
   "author": "roquef",
   "scripts": {
-    "dev": "concurrently --kill-others \"es-dev-server --app-index index.html --node-resolve --dedupe --watch --open\" \"npm run server\"",
+    "dev:all": "concurrently --kill-others \"npm run dev\" \"npm run server\"",
     "postinstall": "npx snowpack@2 install",
     "conjurate": "conjurate component ",
     "server": "node proxy.js",
-    "dev:webapp": "es-dev-server --app-index index.html --node-resolve --dedupe --watch --open"
+    "dev": "es-dev-server --app-index index.html --node-resolve --dedupe --watch --open"
   },
   "dependencies": {
     "cors": "^2.8.5",

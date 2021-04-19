@@ -160,7 +160,7 @@ function drawApp() {
         </div>
 
         <div class="floating-options">
-            <p class="${!options.background ? '__active' : ''}" @click=${() => toggle('background')}>transparent background</p>
+            <p class="${!options.background ? '__active' : ''}" @click=${() => toggle('background')}>transparency ${!options.background ? 'on' : 'off'}</p>
         </div>
 
         ` : html`<drop-area></drop-area>`}

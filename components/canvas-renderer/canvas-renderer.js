@@ -31,12 +31,12 @@ class CanvasRenderer extends LitElement {
 		this.setPlayerState = this.setPlayerState.bind(this);
 
 		this.background = false;
+		this.transformed = {};
 
 		window.addListener('fps_change', this.setFPS.bind(this));
 		window.addListener('skip_frames_change', this.setSkip.bind(this));
-		window.addListener('background_change', value => { 
+		window.addListener('background_change', value => {
 			this.background = value;
-			this.mapped_quantized = {};
 		});
 	}
 
@@ -63,13 +63,27 @@ class CanvasRenderer extends LitElement {
 				padding: 20px;
 				display: flex;
 				align-items: center;
-				justify-content: center;	
+				justify-content: center;
+				position: relative;	
+			}
+
+			:host p {
+				position: absolute;
+				bottom: -38px;
+				right: 0;
 			}
 		`;
 	}
 
 	setImages(images) {
 		this.images = images;
+		for (let i = 0; i < this.images.length; i++) {
+			if (!this.images[i].id) {
+				this.images[i].id = Math.random().toString(36);
+				this.mapped[this.images[i].id] = {};
+			}
+		}
+
 		window.animation_active = true;
 		if (this.images.length < 12) {
 			this.setFPS(this.images.length);
@@ -94,6 +108,11 @@ class CanvasRenderer extends LitElement {
 		return html`
 			<div class="container ${window.animation_active ? '' : '__hidden'}">
 				<canvas></canvas>
+				${
+					this.quantized && !this.transformed[this.actual_image.id].quantized ?
+					html`<p>(${this.frame + 1}) Quantizing frame...</p>` :
+					html`<p>(${this.frame + 1}) Frame is ready</p>`
+				}
 			</div>
 		`;
 	}
@@ -111,56 +130,63 @@ class CanvasRenderer extends LitElement {
 			this.tmpctx.drawImage(img, 0, 0);
 			this.classify(img);
 			this.drawMapped(img);
+			this.requestUpdate();
 		});
 	}
 
 	classify(img) {
-		if (!img.id) {
-			img.id = Math.random().toString(36);
-			this.mapped[img.id] = {};
+		if (!this.transformed[img.id]) {
+			this.transformed[img.id] = this.tmpctx.getImageData(0, 0, img.width, img.height);
 		}
 
-		if (this.cacheData[img.id] && !this.quantized) return this.cacheData[img.id];
-		else {
-			if (this.quantized && !this.mapped_quantized[img.id] || !this.cacheData[img.id]) {
-				let data = this.tmpctx.getImageData(0, 0, img.width, img.height).data;
+		if (this.quantized && !this.transformed[img.id].quantized) {
+			let data = this.tmpctx.getImageData(0, 0, img.width, img.height).data;
+			for (let y = 0; y < img.height; ++y) {
 				for (let x = 0; x < img.width; ++x) {
-					for (let y = 0; y < img.height; ++y) {
-						let index = (y * img.width + x) * 4;
-						let [r, g, b, a] = [data[index], data[index + 1], data[index + 2], data[index + 3]];
+					let index = (y * img.width + x) * 4;
+					let [r, g, b, a] = [data[index], data[index + 1], data[index + 2], data[index + 3]];
 
-						if (this.quantized) {
-							[r, g, b] = this.getQuantized(r, g, b);
-							let color = `rgba(${r},${g},${b},${this.background ? 1 : a})`;
-							if (!this.mapped_quantized[img.id]) this.mapped_quantized[img.id] = {};
-							this.mapped_quantized[img.id][color] ? this.mapped_quantized[img.id][color].push({ x, y }) : this.mapped_quantized[img.id][color] = [{ x, y }];
-						}
-						else {
-							let color = `rgba(${r},${g},${b},${this.background ? 1 : a})`;
-							this.mapped[img.id][color] ? this.mapped[img.id][color].push({ x, y }) : this.mapped[img.id][color] = [{ x, y }];
-						}
-					}
+
+					[r, g, b] = this.getQuantized(r, g, b);
+					this.transformed[img.id].data[index] = r;
+					this.transformed[img.id].data[index + 1] = g;
+					this.transformed[img.id].data[index + 2] = b;
+					this.transformed[img.id].data[index + 3] = a;
 				}
-				this.cacheData[img.id] = data;
-				return data;
 			}
-			else {
-				return this.cacheData[img.id];
-			}
+
+			this.transformed[img.id].quantized = true;
 		}
+
+		return this.transformed[img.id];
 	}
 
 	drawMapped(img) {
-		let iterate = this.quantized ? this.mapped_quantized[img.id] : this.mapped[img.id];
-		for (let color in iterate) {
-			let coordinates = iterate[color];
-			this.ctx.fillStyle = color;
-			for (let c = 0; c < coordinates.length; c++) {
-				let item = coordinates[c];
-				this.ctx.fillRect(item.x * this.zoom, item.y * this.zoom, this.zoom, this.zoom);
+		this.ctx.putImageData(this.resize(this.transformed[img.id], img.width * this.zoom, img.height * this.zoom), 0, 0);
+	}
+
+	resize(original, width, height) {
+		let result = new ImageData(width, height);
+
+		let xFactor = original.width / width,
+			yFactor = original.height / height,
+			dstIndex = 0, x, y, offset;
+
+		for (y = 0; y < height; y++) {
+			offset = ((y * yFactor) | 0) * original.width;
+			for (x = 0; x < width; x++) {
+				let srcIndex = (offset + x * xFactor) << 2;
+
+				result.data[dstIndex] = original.data[srcIndex];
+				result.data[dstIndex + 1] = original.data[srcIndex + 1];
+				result.data[dstIndex + 2] = original.data[srcIndex + 2];
+				result.data[dstIndex + 3] = !this.background ? original.data[srcIndex + 3] : 255;
+				dstIndex += 4;
 			}
 		}
-	}
+
+		return result;
+	};
 
 	quantize(cb) {
 		window.showLoader(() => {
@@ -228,7 +254,7 @@ class CanvasRenderer extends LitElement {
 
 			let quantized = { color: [r, g, b].join(','), total: Infinity };
 			for (let key in scores) {
-				if (scores[key] < quantized.total) {
+				if (scores[key] <= quantized.total) {
 					quantized = { color: key, total: scores[key] };
 				}
 			}
@@ -263,7 +289,7 @@ class CanvasRenderer extends LitElement {
 	}
 
 	animate(delta, jump) {
-		!jump && window.requestAnimationFrame(this.animate);
+		if (!jump) window.requestAnimationFrame(this.animate);
 
 		if (this.rendering) { jump = true; }
 
@@ -273,13 +299,14 @@ class CanvasRenderer extends LitElement {
 
 			window.on('frame', this.frame);
 
-			this.draw(this.images[this.frame]);
+			this.actual_image = this.images[this.frame];
+			this.draw(this.actual_image);
 
 			if (this.frame === 0 && this.rendering) {
 				this.capturer.start();
 			}
 
-			if(!jump && this.active) this.frame += this.skip_frames;
+			if (!jump && this.active) this.frame += this.skip_frames;
 
 			if (this.frame > this.images.length - 1) {
 				this.frame = 0;
@@ -319,22 +346,53 @@ class CanvasRenderer extends LitElement {
 				this.max_colors = palette.length;
 				this.colorMap = {};
 				this.mapped_quantized = {};
-				// this.frame = 0;
-
-				window.hideLoader();
+				this.resetQuantization();
 				this.animate(this.last_delta, true);
+
+				// this.setPlayerState(false);
+				// this.classifyAll(0, () => {
+				// console.log('end');
+				// this.setPlayerState(true);
+				window.hideLoader();
+				// });
 			});
+		}
+	}
+
+	classifyAll(index, cb) {
+		if (this.images[index]) {
+			this.frame++;
+			this.animate(this.last_delta, true);
+			console.log(this.frame, this.images[index].id)
+
+			setTimeout(() => {
+				this.classify(this.images[index]);
+
+				index++;
+				this.classifyAll(index, cb);
+			}, 0);
+		}
+		else {
+			if (cb) cb();
+		}
+	}
+
+	resetQuantization() {
+		for (let id in this.transformed) {
+			this.transformed[id].quantized = false;
 		}
 	}
 
 	zoomIn() {
 		this.zoom *= 2;
+		this.zoom = parseInt(this.zoom);
 		this.animate(this.last_delta, true);
 		this.requestUpdate();
 	}
 
 	zoomOut() {
 		this.zoom /= 2;
+		this.zoom = parseInt(this.zoom);
 		this.animate(this.last_delta, true);
 		this.requestUpdate();
 	}
