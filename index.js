@@ -5,29 +5,36 @@ let player_state = true;
 let options = {
     background: false
 }
+let palette_limit = 24;
+let canvasRendererEl;
+
+function getCanvas() {
+    if (!canvasRendererEl) canvasRendererEl = document.querySelector('canvas-renderer');
+    return canvasRendererEl;
+}
 
 function quantize() {
-    document.querySelector('canvas-renderer').quantize();
+    getCanvas().quantize();
 }
 
 function zoomOut() {
-    document.querySelector('canvas-renderer').zoomOut();
+    getCanvas().zoomOut();
 }
 
 function zoomIn() {
-    document.querySelector('canvas-renderer').zoomIn();
+    getCanvas().zoomIn();
 }
 
 function renderGIF() {
-    document.querySelector('canvas-renderer').renderGIF();
+    getCanvas().renderGIF();
 }
 
 function saveFrame() {
-    document.querySelector('canvas-renderer').saveFrame();
+    getCanvas().saveFrame();
 }
 
 function setFrame(frame) {
-    document.querySelector('canvas-renderer').setFrame(frame);
+    getCanvas().setFrame(frame);
 }
 
 function openPalettes() {
@@ -39,8 +46,15 @@ function openPalettes() {
 function togglePlayerState() {
     player_state = !player_state;
 
-    document.querySelector('canvas-renderer').setPlayerState(player_state);
+    getCanvas().setPlayerState(player_state);
 
+    drawApp();
+}
+
+function paletteLimit(value) {
+    palette_limit += value;
+    palette_limit = palette_limit >= 2 ? palette_limit : 2;
+    getCanvas().setPaletteLimit(palette_limit);
     drawApp();
 }
 
@@ -59,6 +73,8 @@ function drawApp() {
                 margin: 0 10px;
                 letter-spacing: 2px;
                 height: 46px;
+                transition: all ease .2s;
+                outline: none;
             }
 
             .fixed-buttons {
@@ -109,6 +125,10 @@ function drawApp() {
                 padding-left: 1px;
             }
 
+            .round.minus p {
+                padding-bottom: 9px;
+            }
+
             .no-outline {
                 border: none;
                 outline: none;
@@ -137,6 +157,50 @@ function drawApp() {
                 transition: .2s ease all;
                 cursor: pointer;
             }
+            
+            .color-palette-limit {
+                position: relative;
+                display: flex;
+                margin-left: 8px;
+            }
+
+            .chevron {
+                position: absolute;
+                cursor: pointer;
+                transition: all ease .2s;
+            }
+
+            .chevron:hover {
+                transform: scale(1.2);
+                transition: all ease .2s;
+            }
+
+            .chevron.up{
+                width: 0;
+                height: 0;
+                border-style: solid;
+                border-width: 0 10px 15px 10px;
+                border-color: transparent transparent #2e2549 transparent;
+                top: -2px;
+            }
+
+            .chevron.down {
+                width: 0;
+                height: 0;
+                border-style: solid;
+                border-width: 15px 10px 0 10px;
+                border-color: #2e2549 transparent transparent transparent;
+                bottom: -2px;
+            }
+
+            button:hover {
+                transform: scale(1.05);
+                transition: all ease .2s;
+            }
+
+            button.round:hover {
+                transform: scale(1.2);
+            }
         </style>
         <canvas-renderer></canvas-renderer>
         <frame-control active=${image_count > 1}></frame-control>
@@ -149,9 +213,14 @@ function drawApp() {
 
         <div class="fixed-buttons">
             <button class="round" @click=${togglePlayerState}><img src="${player_state ? 'pause.svg' : 'play.svg'}"></button>
-            <button class="round" @click=${zoomOut}><p>-</p></button>
+            <button class="round minus" @click=${zoomOut}><p>-</p></button>
             <button class="round" @click=${zoomIn}><p>+</p></button>
             <button @click=${quantize}>Quantize colors!</button>
+            <div class="color-palette-limit">
+                <div class="chevron up" @click=${() => { paletteLimit(1) }}></div>
+                <p class="limit">${palette_limit} colors</p>
+                <div class="chevron down" @click=${() => { paletteLimit(-1) }}></div>
+            </div>
         </div>
 
         <div class="fixed-buttons-right">

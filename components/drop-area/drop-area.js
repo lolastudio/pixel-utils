@@ -54,7 +54,7 @@ class DropArea extends LitElement {
 		return html`
 			<form class="container" @click=${this.openUpload}>
 				<input type="file" multiple accept="image/*">
-				<p>Drop your image(s) here!</p>
+				<p>Drop your (original size) image(s) here!</p>
 				<p class="hint">(or click here for upload)</p>
 			</form>
 		`;

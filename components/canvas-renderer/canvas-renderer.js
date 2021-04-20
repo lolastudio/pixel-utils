@@ -108,13 +108,18 @@ class CanvasRenderer extends LitElement {
 		return html`
 			<div class="container ${window.animation_active ? '' : '__hidden'}">
 				<canvas></canvas>
-				${
-					this.quantized && !this.transformed[this.actual_image.id].quantized ?
-					html`<p>(${this.frame + 1}) Quantizing frame...</p>` :
-					html`<p>(${this.frame + 1}) Frame is ready</p>`
-				}
+				${this.frameDebug()}
 			</div>
 		`;
+	}
+
+	frameDebug() {
+		if (this.quantized && !this.transformed[this.actual_image?.id]?.quantized) {
+			return html`<p>(${this.frame + 1}) Processing frame</p>`;
+		}
+		else {
+			return html`<p>(${this.frame + 1}) Frame is ready</p>`;
+		}
 	}
 
 	firstUpdated() {
@@ -130,7 +135,6 @@ class CanvasRenderer extends LitElement {
 			this.tmpctx.drawImage(img, 0, 0);
 			this.classify(img);
 			this.drawMapped(img);
-			this.requestUpdate();
 		});
 	}
 
@@ -155,7 +159,9 @@ class CanvasRenderer extends LitElement {
 				}
 			}
 
-			this.transformed[img.id].quantized = true;
+			setTimeout(() => {
+				this.transformed[img.id].quantized = true;
+			}, 0);
 		}
 
 		return this.transformed[img.id];
@@ -243,7 +249,7 @@ class CanvasRenderer extends LitElement {
 
 	getQuantized(r, g, b) {
 		let key = [r, g, b].join(',');
-		let mapped = this.colorMap[key]
+		let mapped = this.colorMap[key];
 
 		if (!mapped) {
 			let scores = {};
@@ -300,29 +306,35 @@ class CanvasRenderer extends LitElement {
 			window.on('frame', this.frame);
 
 			this.actual_image = this.images[this.frame];
+			this.requestUpdate();
 			this.draw(this.actual_image);
 
-			if (this.frame === 0 && this.rendering) {
+			if (this.frame == 0 && this.rendering && !this.capturing) {
 				this.capturer.start();
+				this.capturing = true;
 			}
 
-			if (!jump && this.active) this.frame += this.skip_frames;
+			if (this.active) this.frame += this.skip_frames;
 
 			if (this.frame > this.images.length - 1) {
 				this.frame = 0;
 
 				if (this.rendering) {
 					this.rendering = false;
+					this.capturing = false;
 					this.stopped = true;
 
 					this.capturer.stop();
-					this.capturer.save();
-
-					window.hideLoader();
+					this.capturer.save((blob) => {
+						window.hideLoader();
+						download(blob, this.capturer_options.name + this.capturer_options.format, 'image/gif');
+						this.stopped = false;
+						window.requestAnimationFrame(this.animate);
+					});
 				}
 			}
 			else {
-				if (this.rendering) {
+				if (this.rendering && this.capturing) {
 					this.capturer.capture(this.canvas);
 				}
 			}
@@ -330,12 +342,14 @@ class CanvasRenderer extends LitElement {
 	}
 
 	setPalette(palette) {
+		this.palette = palette;
 		if (!this.quantized) {
 			this.quantize(() => {
 				this.setPalette(palette);
 			});
 		}
 		else {
+			this.setPlayerState(false);
 			window.showLoader(() => {
 				let new_colors = [];
 				for (let color of palette) {
@@ -347,14 +361,9 @@ class CanvasRenderer extends LitElement {
 				this.colorMap = {};
 				this.mapped_quantized = {};
 				this.resetQuantization();
+				this.setPlayerState(true);
 				this.animate(this.last_delta, true);
-
-				// this.setPlayerState(false);
-				// this.classifyAll(0, () => {
-				// console.log('end');
-				// this.setPlayerState(true);
 				window.hideLoader();
-				// });
 			});
 		}
 	}
@@ -363,7 +372,6 @@ class CanvasRenderer extends LitElement {
 		if (this.images[index]) {
 			this.frame++;
 			this.animate(this.last_delta, true);
-			console.log(this.frame, this.images[index].id)
 
 			setTimeout(() => {
 				this.classify(this.images[index]);
@@ -378,6 +386,7 @@ class CanvasRenderer extends LitElement {
 	}
 
 	resetQuantization() {
+		this.colorMap = {};
 		for (let id in this.transformed) {
 			this.transformed[id].quantized = false;
 		}
@@ -393,19 +402,23 @@ class CanvasRenderer extends LitElement {
 	zoomOut() {
 		this.zoom /= 2;
 		this.zoom = parseInt(this.zoom);
+		this.zoom = this.zoom >= 1 ? this.zoom : 1;
 		this.animate(this.last_delta, true);
 		this.requestUpdate();
 	}
 
 	renderGIF() {
 		window.showLoader();
-		this.capturer = new CCapture({
+
+		this.capturer_options = {
 			framerate: this.fps,
 			format: 'gif',
 			workersPath: 'web_modules/',
 			quality: 10,
 			name: `pixel_utils_${window.getDate()}`
-		});
+		};
+
+		this.capturer = new CCapture(this.capturer_options);
 		this.frame = 0;
 		this.rendering = true;
 	}
@@ -429,6 +442,17 @@ class CanvasRenderer extends LitElement {
 
 	setPlayerState(state) {
 		this.active = state;
+	}
+
+	setPaletteLimit(value) {
+		this.max_colors = value;
+
+		if (this.quantized && !this.palette) {
+			this.classified = false;
+			this.quantize(() => {
+				this.resetQuantization();
+			});
+		}
 	}
 }
 
