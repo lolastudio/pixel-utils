@@ -260,7 +260,7 @@ class CanvasRenderer extends LitElement {
 
 			let quantized = { color: [r, g, b].join(','), total: Infinity };
 			for (let key in scores) {
-				if (scores[key] <= quantized.total) {
+				if (scores[key] < quantized.total) {
 					quantized = { color: key, total: scores[key] };
 				}
 			}
