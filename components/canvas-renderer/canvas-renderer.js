@@ -327,7 +327,7 @@ class CanvasRenderer extends LitElement {
 					this.capturer.stop();
 					this.capturer.save((blob) => {
 						window.hideLoader();
-						download(blob, this.capturer_options.name + this.capturer_options.format, 'image/gif');
+						download(blob, this.capturer_options.name + this.capturer_options.format, this.mime);
 						this.stopped = false;
 						window.requestAnimationFrame(this.animate);
 					});
@@ -408,6 +408,7 @@ class CanvasRenderer extends LitElement {
 	}
 
 	renderGIF() {
+		this.mime = 'image/gif';
 		window.showLoader();
 
 		this.capturer_options = {
@@ -424,6 +425,7 @@ class CanvasRenderer extends LitElement {
 	}
 
 	renderWEBM() {
+		this.mime = 'video/webm';
 		window.showLoader();
 
 		this.capturer_options = {
