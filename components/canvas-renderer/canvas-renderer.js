@@ -423,6 +423,22 @@ class CanvasRenderer extends LitElement {
 		this.rendering = true;
 	}
 
+	renderWEBM() {
+		window.showLoader();
+
+		this.capturer_options = {
+			framerate: this.fps,
+			format: 'webm',
+			workersPath: 'web_modules/',
+			quality: 10,
+			name: `pixel_utils_${window.getDate()}`
+		};
+
+		this.capturer = new CCapture(this.capturer_options);
+		this.frame = 0;
+		this.rendering = true;
+	}
+
 	saveFrame() {
 		window.showLoader(() => {
 			let image = this.canvas.toDataURL('image/png').replace('image/png', 'image/octet-stream');

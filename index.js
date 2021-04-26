@@ -29,6 +29,10 @@ function renderGIF() {
     getCanvas().renderGIF();
 }
 
+function renderWEBM() {
+    getCanvas().renderWEBM();
+}
+
 function saveFrame() {
     getCanvas().saveFrame();
 }
@@ -224,6 +228,7 @@ function drawApp() {
         </div>
 
         <div class="fixed-buttons-right">
+            ${image_count > 1 ? html`<button @click=${renderWEBM}>Export WEBM</button>` : ''}
             ${image_count > 1 ? html`<button @click=${renderGIF}>Export GIF</button>` : ''}
             <button @click=${saveFrame}>Save Frame</button>
         </div>
