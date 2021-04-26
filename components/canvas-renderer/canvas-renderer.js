@@ -300,10 +300,9 @@ class CanvasRenderer extends LitElement {
 		if (this.rendering) { jump = true; }
 
 		if (!this.stopped && delta - this.last_delta >= this.tpf || jump) {
+			window.on('frame', this.frame);
 			window.on('real_tpf', delta - this.last_delta);
 			this.last_delta = delta;
-
-			window.on('frame', this.frame);
 
 			this.actual_image = this.images[this.frame];
 			this.requestUpdate();
@@ -314,29 +313,32 @@ class CanvasRenderer extends LitElement {
 				this.capturing = true;
 			}
 
-			if (this.active) this.frame += this.skip_frames;
+			if (this.rendering && this.capturing) {
+				this.capturer.capture(this.canvas);
+			}
 
-			if (this.frame > this.images.length - 1) {
-				this.frame = 0;
-
+			if (this.frame >= this.images.length - 1) {
 				if (this.rendering) {
 					this.rendering = false;
 					this.capturing = false;
 					this.stopped = true;
 
+					this.mime.split('webm').length > 1 && this.capturer.capture(this.canvas);
 					this.capturer.stop();
 					this.capturer.save((blob) => {
 						window.hideLoader();
-						download(blob, this.capturer_options.name + this.capturer_options.format, this.mime);
+						download(blob, this.capturer_options.name + (this.mime.split('webm').length > 1 ? '.webm' : ''), this.mime);
 						this.stopped = false;
 						window.requestAnimationFrame(this.animate);
 					});
+
+					// this.capturer.save();
 				}
+
+				this.frame = 0;
 			}
 			else {
-				if (this.rendering && this.capturing) {
-					this.capturer.capture(this.canvas);
-				}
+				if (this.active) this.frame += this.skip_frames;
 			}
 		}
 	}
@@ -412,7 +414,7 @@ class CanvasRenderer extends LitElement {
 		window.showLoader();
 
 		this.capturer_options = {
-			framerate: this.fps,
+			framerate: parseInt(this.fps),
 			format: 'gif',
 			workersPath: 'web_modules/',
 			quality: 10,
@@ -429,10 +431,8 @@ class CanvasRenderer extends LitElement {
 		window.showLoader();
 
 		this.capturer_options = {
-			framerate: this.fps,
+			framerate: parseInt(this.fps),
 			format: 'webm',
-			workersPath: 'web_modules/',
-			quality: 10,
 			name: `pixel_utils_${window.getDate()}`
 		};
 
