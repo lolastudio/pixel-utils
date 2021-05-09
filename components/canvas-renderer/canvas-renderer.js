@@ -59,7 +59,7 @@ class CanvasRenderer extends LitElement {
 
 			:host .container {
 				border-radius: 6px;
-				background: #fafafa;
+				// background: #fafafa;
 				padding: 20px;
 				display: flex;
 				align-items: center;

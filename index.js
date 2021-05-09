@@ -228,8 +228,10 @@ function drawApp() {
         </div>
 
         <div class="fixed-buttons-right">
-            ${image_count > 1 ? html`<button @click=${renderWEBM}>Export WEBM</button>` : ''}
-            ${image_count > 1 ? html`<button @click=${renderGIF}>Export GIF</button>` : ''}
+            <options-button>
+                ${image_count > 1 ? html`<button @click=${renderGIF}>Export GIF</button>` : ''}
+                ${image_count > 1 ? html`<button @click=${renderWEBM}>Export WEBM</button>` : ''}
+            </options-button>
             <button @click=${saveFrame}>Save Frame</button>
         </div>
 
