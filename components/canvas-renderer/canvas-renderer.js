@@ -31,6 +31,8 @@ class CanvasRenderer extends LitElement {
 		this.setPlayerState = this.setPlayerState.bind(this);
 		this.setDither = this.setDither.bind(this);
 
+		this.quantizing_queue = {};
+
 		this.background = false;
 		this.transformed = {};
 
@@ -41,8 +43,6 @@ class CanvasRenderer extends LitElement {
 		});
 
 		window.listen('dither_change', this.setDither);
-
-		this.classify_worker = new Worker('/components/canvas-renderer/classify.js');
 
 		this.dither = false;
 
@@ -170,7 +170,8 @@ class CanvasRenderer extends LitElement {
 			this.transformed[img.id] = this.tmpctx.getImageData(0, 0, img.width, img.height);
 		}
 
-		if (this.quantized && !this.transformed[img.id].quantized) {
+		if (this.quantized && !this.transformed[img.id].quantized && !this.quantizing_queue[img.id]) {
+			this.quantizing_queue[img.id] = true;
 			let data = this.tmpctx.getImageData(0, 0, img.width, img.height).data;
 
 			for (let y = 0; y < img.height; ++y) {
@@ -342,12 +343,13 @@ class CanvasRenderer extends LitElement {
 
 		if (this.rendering) { jump = true; }
 
+		this.actual_image = this.images[this.frame];
+
 		if (!this.stopped && delta - this.last_delta >= this.tpf || jump) {
 			window.on('frame', this.frame);
 			window.on('real_tpf', delta - this.last_delta);
 			this.last_delta = delta;
 
-			this.actual_image = this.images[this.frame];
 			this.requestUpdate();
 			this.draw(this.actual_image);
 
@@ -381,6 +383,10 @@ class CanvasRenderer extends LitElement {
 				this.frame = 0;
 			}
 			else {
+				if (this.quantized && this.actual_image && !this.transformed[this.actual_image.id]?.quantized) {
+					return;
+				}
+
 				if (this.active) this.frame += this.skip_frames;
 			}
 		}
@@ -435,6 +441,7 @@ class CanvasRenderer extends LitElement {
 
 	resetQuantization() {
 		this.colorMap = {};
+		this.quantizing_queue = {};
 		for (let id in this.transformed) {
 			this.transformed[id].quantized = false;
 		}
