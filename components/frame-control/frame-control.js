@@ -13,11 +13,11 @@ class FrameControl extends LitElement {
 
 		this.images = [];
 
-		window.addListener('real_tpf', tpf => {
+		window.listen('real_tpf', tpf => {
 			this.rfps = Math.ceil(1e3 / tpf);
 		})
 
-		window.addListener('fps_change', this.setFPS.bind(this));
+		window.listen('fps_change', this.setFPS.bind(this));
 	}
 
 	static get properties() {
@@ -88,7 +88,8 @@ class FrameControl extends LitElement {
 			}
 
 			.skip-frame {
-				left: 2vh;
+				right: 2vh;
+				top: 116px;
 			}
 
 			button {
@@ -124,6 +125,7 @@ class FrameControl extends LitElement {
 
 			p {
 				margin: 0;
+				transition: .2s ease all;
 			}
 
 			.fps p, .skip-frame p {
@@ -174,6 +176,28 @@ class FrameControl extends LitElement {
 				margin: 0;
 				margin-left: -10px;
 			}
+
+			.fps-text {
+				cursor: pointer;
+				transition: .2s ease all;
+				display: flex;
+			}
+
+			.fps-text:hover {
+				transform: scale(1.05);
+				transition: .2s ease all;
+			}
+
+			.fps-text input {
+				width: 40px;
+				margin-right: 4px;
+				text-align: right;
+				background: transparent;
+				color: #fffbd1;
+				font-family: 'Fredoka One', sans-serif;
+				font-size: 20px;
+				border: none;
+			}
 		`;
 	}
 
@@ -190,7 +214,14 @@ class FrameControl extends LitElement {
 				${this.getList()}
 			</div>
 			<div class="fps ${this.images.length > 1 ? '' : '__hidden'}">
-				<p>${this.fps} fps</p>
+				<div class="fps-text">
+					${
+						this.editing_fps ? html`
+							<input @keydown=${this.onFPSInputKey} placeholder="xx.x" value="${this.fps}">
+							<p>fps</p>
+						` : html`<p title="click to edit fps" @click=${this.editFPS}>${this.fps} fps</p>`
+					}					
+				</div>
 				<!-- <p>real fps: ${this.rfps}</p> -->
 				<div class="buttons">
 					<button class="round" @click=${this.subFPS}>-</button>
@@ -199,6 +230,18 @@ class FrameControl extends LitElement {
 			</div>
 
 		`;
+	}
+
+	onFPSInputKey(e, bypass) {
+		if((e && e.keyCode === 13) || bypass) {
+			let input = this.shadowRoot.querySelector('.fps-text input');
+			if (input) {
+				let val = this.shadowRoot.querySelector('.fps-text input').value;
+				if(!isNaN(val)) this.setFPS(+val, true);
+				this.editing_fps = false;
+				this.requestUpdate();
+			}
+		} 
 	}
 
 	getList() {
@@ -268,9 +311,11 @@ class FrameControl extends LitElement {
 		this.requestUpdate();
 	}
 
-	setFPS(fps) {
+	setFPS(fps, emit) {
 		this.fps = fps;
 		this.tpf = 1e3 / this.fps;
+
+		if(emit) window.on('fps_change', this.fps);
 	}
 
 	setFrame(id, emit) {
@@ -286,6 +331,15 @@ class FrameControl extends LitElement {
 	setImages(images) {
 		this.images = images;
 		this.requestUpdate();
+	}
+
+	editFPS(){
+		this.editing_fps = true;
+		 this.requestUpdate();
+		setTimeout(() => {
+			console.log(this.shadowRoot.querySelector('.fps-text').children);
+			this.shadowRoot.querySelector('.fps-text input').focus()
+		}, 0)
 	}
 }
 

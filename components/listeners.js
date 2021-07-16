@@ -13,7 +13,7 @@ window.on = (event, data) => {
     }
 }
 
-window.addListener = (key, cb) => {
+window.listen = (key, cb) => {
     if (!listeners[key]) listeners[key] = []
     listeners[key].push(cb);
 }

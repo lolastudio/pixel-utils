@@ -3,7 +3,8 @@ import '/components/entry.js';
 let image_count = 0;
 let player_state = true;
 let options = {
-    background: false
+    background: false,
+    dither: false
 }
 let palette_limit = 24;
 let canvasRendererEl;
@@ -142,6 +143,7 @@ function drawApp() {
                 position: fixed;
                 bottom: calc(2vh + 106px);
                 right: calc(2vh + 40px);
+                text-align: right;
             }
 
             .floating-options p {
@@ -208,6 +210,7 @@ function drawApp() {
         </style>
         <canvas-renderer></canvas-renderer>
         <frame-control active=${image_count > 1}></frame-control>
+        <palette-renderer></palette-renderer>
         ${window.animation_active ? html`
         <lospec-palette></lospec-palette>
 
@@ -236,6 +239,7 @@ function drawApp() {
         </div>
 
         <div class="floating-options">
+            <p class="${options.dither ? '__active' : ''}" @click=${() => toggle('dither')}>ordered dithering ${options.dither ? 'on' : 'off'}</p>
             <p class="${!options.background ? '__active' : ''}" @click=${() => toggle('background')}>transparency ${!options.background ? 'on' : 'off'}</p>
         </div>
 
@@ -249,15 +253,19 @@ window.addEventListener('click', evt => {
     if (evt.target.nodeName != 'LOSPEC-PALETTE') {
         document.querySelector('lospec-palette')?.toggle(false);
     }
-})
-window.addListener('updateApp', drawApp);
 
-window.addListener('drop', images => {
+    if (evt.target.nodeName != 'FRAME-CONTROL') {
+        document.querySelector('frame-control')?.onFPSInputKey(null, true);
+    }
+})
+window.listen('updateApp', drawApp);
+
+window.listen('drop', images => {
     image_count = images.length;
     drawApp();
 });
 
-window.addListener('frame_set', setFrame);
+window.listen('frame_set', setFrame);
 
 function toggle(key) {
     options[key] = !options[key];

@@ -9,7 +9,7 @@ class CanvasRenderer extends LitElement {
 		this.tmpctx = this.tmpcanvas.getContext('2d');
 
 		this.zoom = 2;
-		this.mapped = {}, this.mapped_quantized = {}, this.cacheData = {}, this.colorMap = {};
+		this.mapped = {}, this.mapped_quantized = {}, this.colorMap = {};
 		this.images = [];
 		this.frame = 0, this.last_delta = 0;
 		this.fps = 12;
@@ -29,15 +29,42 @@ class CanvasRenderer extends LitElement {
 		this.saveFrame = this.saveFrame.bind(this);
 		this.setFrame = this.setFrame.bind(this);
 		this.setPlayerState = this.setPlayerState.bind(this);
+		this.setDither = this.setDither.bind(this);
 
 		this.background = false;
 		this.transformed = {};
 
-		window.addListener('fps_change', this.setFPS.bind(this));
-		window.addListener('skip_frames_change', this.setSkip.bind(this));
-		window.addListener('background_change', value => {
+		window.listen('fps_change', this.setFPS.bind(this));
+		window.listen('skip_frames_change', this.setSkip.bind(this));
+		window.listen('background_change', value => {
 			this.background = value;
 		});
+
+		window.listen('dither_change', this.setDither);
+
+		this.classify_worker = new Worker('/components/canvas-renderer/classify.js');
+
+		this.dither = false;
+
+		this.bayer8 = [
+			[0, 32, 8, 40, 2, 34, 10, 42],
+			[48, 16, 56, 24, 50, 18, 58, 26],
+			[12, 44, 4, 36, 14, 46, 6, 38],
+			[60, 28, 52, 20, 62, 30, 54, 22],
+			[3, 35, 11, 43, 1, 33, 9, 41],
+			[51, 19, 59, 27, 49, 17, 57, 25],
+			[15, 47, 7, 39, 13, 45, 5, 37],
+			[63, 31, 55, 23, 61, 29, 53, 21]
+		]
+
+		this.bayer4 = [
+			[0, 8, 2, 10, 0],
+			[12, 4, 14, 6, 12],
+			[3, 11, 1, 9, 3],
+			[15, 7, 13, 5, 15]
+		];
+
+		this.bayer_size = 4;
 	}
 
 	static get styles() {
@@ -115,10 +142,10 @@ class CanvasRenderer extends LitElement {
 
 	frameDebug() {
 		if (this.quantized && !this.transformed[this.actual_image?.id]?.quantized) {
-			return html`<p>(${this.frame + 1}) Processing frame</p>`;
+			return html`<p>Processing frame (${this.frame + 1})</p>`;
 		}
 		else {
-			return html`<p>(${this.frame + 1}) Frame is ready</p>`;
+			return html`<p>(${this.frame + 1})</p>`;
 		}
 	}
 
@@ -145,17 +172,33 @@ class CanvasRenderer extends LitElement {
 
 		if (this.quantized && !this.transformed[img.id].quantized) {
 			let data = this.tmpctx.getImageData(0, 0, img.width, img.height).data;
+
 			for (let y = 0; y < img.height; ++y) {
 				for (let x = 0; x < img.width; ++x) {
 					let index = (y * img.width + x) * 4;
 					let [r, g, b, a] = [data[index], data[index + 1], data[index + 2], data[index + 3]];
 
+					if (!this.dither) {
+						[r, g, b] = this.getQuantized(r, g, b);
+						this.transformed[img.id].data[index] = r;
+						this.transformed[img.id].data[index + 1] = g;
+						this.transformed[img.id].data[index + 2] = b;
+						this.transformed[img.id].data[index + 3] = a;
+					}
+					else {
+						let map = this.bayer4[x % this.bayer_size][y % this.bayer_size];
+						r = +r + map;
+						g = +g + map;
+						b = +b + map;
 
-					[r, g, b] = this.getQuantized(r, g, b);
-					this.transformed[img.id].data[index] = r;
-					this.transformed[img.id].data[index + 1] = g;
-					this.transformed[img.id].data[index + 2] = b;
-					this.transformed[img.id].data[index + 3] = a;
+						[r, g, b] = this.getQuantized(r, g, b);
+
+						this.transformed[img.id].data[index] = r;
+						this.transformed[img.id].data[index + 1] = g;
+						this.transformed[img.id].data[index + 2] = b;
+						this.transformed[img.id].data[index + 3] = a;
+					}
+
 				}
 			}
 
@@ -351,6 +394,7 @@ class CanvasRenderer extends LitElement {
 			});
 		}
 		else {
+			let last_state = this.active;
 			this.setPlayerState(false);
 			window.showLoader(() => {
 				let new_colors = [];
@@ -363,11 +407,13 @@ class CanvasRenderer extends LitElement {
 				this.colorMap = {};
 				this.mapped_quantized = {};
 				this.resetQuantization();
-				this.setPlayerState(true);
+				this.setPlayerState(last_state);
 				this.animate(this.last_delta, true);
 				window.hideLoader();
 			});
 		}
+
+		window.on('palette_change', this.palette);
 	}
 
 	classifyAll(index, cb) {
@@ -460,6 +506,11 @@ class CanvasRenderer extends LitElement {
 
 	setPlayerState(state) {
 		this.active = state;
+	}
+
+	setDither(value) {
+		this.dither = value;
+		this.resetQuantization();
 	}
 
 	setPaletteLimit(value) {
