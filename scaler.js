@@ -1,47 +1,118 @@
-let img = new Image();
-img.src = '0027.png';
-
+let size = 2;
 let canvas = document.createElement('canvas');
 let ctx = canvas.getContext('2d');
+let canvas_resize = document.createElement('canvas');
+let ctx_resize = canvas_resize.getContext('2d');
+let canvas2 = document.createElement('canvas');
+let ctx2 = canvas2.getContext('2d');
+let canvas3 = document.createElement('canvas');
+let ctx3 = canvas3.getContext('2d');
+let image_data;
+let mapped = {};
+var capturer = new CCapture({ format: 'webm', framerate: 60, motionBlurFrames: 1 });
 
-let scale = 2;
-
+let img = new Image();
+img.src = 'dk.jpg';
 img.onload = () => {
     canvas.width = img.width;
     canvas.height = img.height;
+    canvas_resize.width = img.width / (size / 2);
+    canvas_resize.height = img.height / (size / 2);
+    canvas2.width = img.width;
+    canvas2.height = img.height;
+    canvas3.width = img.width;
+    canvas3.height = img.height;
     ctx.drawImage(img, 0, 0);
+    ctx_resize.drawImage(img, 0, 0, canvas_resize.width, canvas_resize.height);
+    // ctx2.fillStyle = '#000';
+    ctx2.fillRect(0, 0, canvas.width, canvas.height)
 
-    let canvas2 = document.createElement('canvas');
-    canvas2.width = canvas.width * scale;
-    canvas2.height = canvas.height * scale;
-    document.body.appendChild(canvas2);
+    // document.body.appendChild(canvas);
+    // document.body.appendChild(canvas_resize);
+    // document.body.appendChild(canvas2);
+    document.body.appendChild(canvas3);
 
-    let ctx2 = canvas2.getContext('2d');
-    console.time('resize');
-    let newid = nearest(ctx.getImageData(0, 0, canvas.width, canvas.height), img.width * scale, img.height * scale);
-    ctx2.putImageData(newid, 0, 0);
-    console.timeEnd('resize');
+    // ctx2.globalCompositeOperation = 'luminosity';
+    ctx2.globalCompositeOperation = 'source-atop';
+
+    image_data = ctx_resize.getImageData(0, 0, canvas_resize.width, canvas_resize.height);
+    mapRays();
 }
 
-function nearest(original, width, height) {
-    let result = new ImageData(width, height);
+let rendering = false;
 
-    let xFactor = original.width / width,
-        yFactor = original.height / height,
-        dstIndex = 0, x, y, offset;
+function mapRays() {
+    let data = image_data.data;
+    for (let y = 0; y < canvas_resize.height; ++y) {
+        for (let x = 0; x < canvas_resize.width; ++x) {
+            let index = (y * canvas_resize.width + x) * 4;
+            let [r, g, b, a] = [data[index], data[index + 1], data[index + 2], data[index + 3]];
+            let luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+            let radius = (size / 2) + ((luminance / 255));
+            if (!mapped[y]) mapped[y] = {}
 
-    for (y = 0; y < height; y++) {
-        offset = ((y * yFactor) | 0) * original.width;
-        for (x = 0; x < width; x++) {
-            let srcIndex = (offset + x * xFactor) << 2;
-
-            result.data[dstIndex] = original.data[srcIndex];
-            result.data[dstIndex + 1] = original.data[srcIndex + 1];
-            result.data[dstIndex + 2] = original.data[srcIndex + 2];
-            result.data[dstIndex + 3] = original.data[srcIndex + 3];
-            dstIndex += 4;
+            mapped[y][x] = {
+                x: (x * (size / 2)) + (Math.random() / 2),
+                y: (y * (size / 2)) + (Math.random() / 2),
+                rx: radius * 1.9,
+                ry: radius * .1,
+                radius,
+                color: `rgb(${r}, ${g}, ${b})`
+                // color: 'rgb(255,255,255)'
+            }
         }
     }
 
-    return result;
-};
+    // capturer.start();
+
+    draw(0);
+}
+
+let steps = 8;
+let filter = `contrast(1.1) brightness(${1.4}) saturate(1.4) blur(${size / 2}px)`;
+function draw(y) {
+    if (y >= canvas_resize.height) {
+        y = 0;
+
+        if (rendering === false) {
+            rendering = true;
+            console.time('render');
+            capturer.start();
+        }
+        else if (rendering === true) {
+            console.timeEnd('render');
+            capturer.stop();
+            capturer.save();
+            rendering = null
+        }
+    }
+
+    requestAnimationFrame(() => { draw(y + 1) });
+    // ctx3.drawImage(canvas, 0, 0);
+    ctx3.drawImage(canvas2, 0, 0);
+    capturer.capture(canvas3);
+
+    let w = canvas_resize.width;
+    let h = canvas_resize.height;
+
+    for (let x = 0; x < w; x++) {
+        // for (let y = 0; y < h; y++) {
+        let ray = mapped[y][x];
+        ctx2.beginPath();
+        ctx.moveTo(ray.x, ray.y);
+        ctx2.ellipse(ray.x, ray.y, ray.rx, ray.ry, 0, 0, 2 * Math.PI, true);
+        ctx2.fillStyle = ray.color;
+        ctx2.fill();
+        // }
+    }
+
+    if (y % Math.round(canvas.height / steps) === 0) {
+        ctx2.filter = filter;
+    }
+
+    if (y % Math.round(canvas.height / (steps * 4)) === 0) {
+        ctx2.fillStyle = `rgba(0, 0, 0, ${1 / (steps * 6)})`;
+        ctx2.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+}
