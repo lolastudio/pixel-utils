@@ -79,6 +79,8 @@ class DropArea extends LitElement {
 			this.images.push(this.newImage(src));
 		}
 
+		console.log(this.images)
+
 		window.on('drop', this.images);
 		this.requestUpdate();
 	}

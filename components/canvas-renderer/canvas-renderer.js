@@ -1,5 +1,6 @@
 import { LitElement, html, css } from '/web_modules/lit-element.js';
 import ciede2000 from '../diff.js';
+import * as workerTimers from '/node_modules/worker-timers/build/es2019/module.js';
 
 class CanvasRenderer extends LitElement {
 	constructor() {
@@ -30,6 +31,7 @@ class CanvasRenderer extends LitElement {
 		this.setFrame = this.setFrame.bind(this);
 		this.setPlayerState = this.setPlayerState.bind(this);
 		this.setDither = this.setDither.bind(this);
+		this.animate = this.animate.bind(this);
 
 		this.quantizing_queue = {};
 
@@ -339,57 +341,62 @@ class CanvasRenderer extends LitElement {
 	}
 
 	animate(delta, jump) {
-		if (!jump) window.requestAnimationFrame(this.animate);
+		// if (!jump) window.requestAnimationFrame(this.animate);
+		if (!jump) {
+			console.log(this.rendering ? 0 : this.tpf);
+			this.wtimeout !== undefined && workerTimers.clearTimeout(this.wtimeout);
+			this.wtimeout = workerTimers.setTimeout(this.animate, this.rendering ? 0 : this.tpf);
+		}
 
 		if (this.rendering) { jump = true; }
 
 		this.actual_image = this.images[this.frame];
 
-		if (!this.stopped && delta - this.last_delta >= this.tpf || jump) {
-			window.on('frame', this.frame);
-			window.on('real_tpf', delta - this.last_delta);
-			this.last_delta = delta;
+		// if (!this.stopped && delta - this.last_delta >= this.tpf || jump) {
+		window.on('frame', this.frame);
+		window.on('real_tpf', delta - this.last_delta);
+		this.last_delta = delta;
 
-			this.requestUpdate();
-			this.draw(this.actual_image);
+		this.requestUpdate();
+		this.draw(this.actual_image);
 
-			if (this.frame == 0 && this.rendering && !this.capturing) {
-				this.capturer.start();
-				this.capturing = true;
-			}
-
-			if (this.rendering && this.capturing) {
-				this.capturer.capture(this.canvas);
-			}
-
-			if (this.frame >= this.images.length - 1) {
-				if (this.rendering) {
-					this.rendering = false;
-					this.capturing = false;
-					this.stopped = true;
-
-					this.mime.split('webm').length > 1 && this.capturer.capture(this.canvas);
-					this.capturer.stop();
-					this.capturer.save((blob) => {
-						window.hideLoader();
-						download(blob, this.capturer_options.name + (this.mime.split('webm').length > 1 ? '.webm' : ''), this.mime);
-						this.stopped = false;
-						window.requestAnimationFrame(this.animate);
-					});
-
-					// this.capturer.save();
-				}
-
-				this.frame = 0;
-			}
-			else {
-				if (this.quantized && this.actual_image && !this.transformed[this.actual_image.id]?.quantized) {
-					return;
-				}
-
-				if (this.active) this.frame += this.skip_frames;
-			}
+		if (this.frame == 0 && this.rendering && !this.capturing) {
+			this.capturer.start();
+			this.capturing = true;
 		}
+
+		if (this.rendering && this.capturing) {
+			this.capturer.capture(this.canvas);
+		}
+
+		if (this.frame >= this.images.length - 1) {
+			if (this.rendering) {
+				this.rendering = false;
+				this.capturing = false;
+				this.stopped = true;
+
+				this.mime.split('webm').length > 1 && this.capturer.capture(this.canvas);
+				this.capturer.stop();
+				this.capturer.save((blob) => {
+					window.hideLoader();
+					download(blob, this.capturer_options.name + (this.mime.split('webm').length > 1 ? '.webm' : ''), this.mime);
+					this.stopped = false;
+					window.requestAnimationFrame(this.animate);
+				});
+
+				// this.capturer.save();
+			}
+
+			this.frame = 0;
+		}
+		else {
+			if (this.quantized && this.actual_image && !this.transformed[this.actual_image.id]?.quantized) {
+				return;
+			}
+
+			if (this.active) this.frame += this.skip_frames;
+		}
+		// }
 	}
 
 	setPalette(palette) {
@@ -471,7 +478,7 @@ class CanvasRenderer extends LitElement {
 			format: 'gif',
 			workersPath: 'web_modules/',
 			quality: 10,
-			name: `pixel_utils_${window.getDate()}`
+			name: `output_skip${(this.skip_frames - 1)}_${('' + this.fps).split('.').join('-')}fps_${window.getDate()}`
 		};
 
 		this.capturer = new CCapture(this.capturer_options);

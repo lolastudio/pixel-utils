@@ -9,37 +9,52 @@ let canvas3 = document.createElement('canvas');
 let ctx3 = canvas3.getContext('2d');
 let image_data;
 let mapped = {};
-var capturer = new CCapture({ format: 'webm', framerate: 60, motionBlurFrames: 1 });
-let padding = 1;
+var capturer = new CCapture({
+    format: 'gif',
+    workersPath: 'web_modules/',
+    quality: 10,
+    framerate: 60,
+    motionBlurFrames: 1
+});
+let padding_y = 1.25;
+let padding_x = 1;
 
 let img = new Image();
-img.src = 'dk.jpg';
-img.onload = () => {
-    canvas.width = img.width;
-    canvas.height = img.height;
-    canvas_resize.width = img.width / (size / 2);
-    canvas_resize.height = img.height / (size / 2);
+let intensity = 4;
 
-    canvas2.width = img.width + (canvas_resize.width * padding);
-    canvas2.height = img.height + (canvas_resize.height * padding);
-    canvas3.width = img.width + (canvas_resize.width * padding);
-    canvas3.height = img.height + (canvas_resize.height * padding);
-    ctx.drawImage(img, 0, 0);
-    ctx_resize.drawImage(img, 0, 0, canvas_resize.width, canvas_resize.height);
-    // ctx2.fillStyle = '#000';
-    ctx2.fillRect(0, 0, canvas2.width, canvas2.height)
+window.listen('drop', (images) => {
+    document.body.querySelector('drop-area').remove();
+    img = images[0];
+    size = +window.prompt('phosphor size') || 8;
+    intensity = +window.prompt('phosphor intensity') || 2;
+    img.onload = () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        canvas_resize.width = img.width / size;
+        canvas_resize.height = img.height / size;
 
-    // document.body.appendChild(canvas);
-    // document.body.appendChild(canvas_resize);
-    // document.body.appendChild(canvas2);
-    document.body.appendChild(canvas3);
+        canvas2.width = canvas_resize.width * size + (padding_x * canvas_resize.width);
+        canvas2.height = canvas_resize.height * size + (padding_y * canvas_resize.height);
+        canvas3.width = canvas2.width;
+        canvas3.height = canvas2.height;
+        ctx.drawImage(img, 0, 0);
+        // ctx_resize.filter = 'contrast(1.2)';
+        ctx_resize.drawImage(img, 0, 0, canvas_resize.width, canvas_resize.height);
+        // ctx2.fillStyle = '#000';
+        ctx2.fillRect(0, 0, canvas2.width, canvas2.height)
 
-    // ctx2.globalCompositeOperation = 'luminosity';
-    ctx2.globalCompositeOperation = 'source-atop';
+        // document.body.appendChild(canvas);
+        // document.body.appendChild(canvas_resize);
+        // document.body.appendChild(canvas2);
+        document.body.appendChild(canvas3);
 
-    image_data = ctx_resize.getImageData(0, 0, canvas_resize.width, canvas_resize.height);
-    mapRays();
-}
+        // ctx2.globalCompositeOperation = 'luminosity';
+        ctx2.globalCompositeOperation = 'source-atop';
+
+        image_data = ctx_resize.getImageData(0, 0, canvas_resize.width, canvas_resize.height);
+        mapRays();
+    }
+});
 
 let rendering = false;
 function mapRays() {
@@ -53,12 +68,14 @@ function mapRays() {
             if (!mapped[y]) mapped[y] = {}
 
             mapped[y][x] = {
-                x: (x * (size / 2)) + (Math.random() / 2),
-                y: (y * (size / 2)) + (Math.random() / 4),
-                rx: radius * 1.9,
-                ry: radius * .1,
+                // x: (x * (size)) + (x * padding_x) + (Math.random() * (size / 20)),
+                // y: (y * (size)) + (y * padding_y) + (Math.random() * (size / 40)),
+                x: (x * (size)) + (x * padding_x),
+                y: (y * (size)) + (y * padding_y),
                 radius,
-                color: `rgb(${r}, ${g}, ${b})`
+                color: `rgb(${r}, ${g}, ${b / 2})`,
+                r: r, g: g, b: b / 2,
+                luminance: luminance / (255)
                 // color: 'rgb(255,255,255)'
             }
         }
@@ -66,61 +83,83 @@ function mapRays() {
 
     // capturer.start();
 
+    ctx2.filter = filter;
     draw(0);
 }
 
 let steps = 8;
 let count = 0;
-let filter = `contrast(1.1) brightness(${1.4}) saturate(1.4) blur(${size / 4}px)`;
+let filter = `contrast(1.2) brightness(1.2) saturate(1.2) blur(${size / 2.75}px) hue-rotate(10deg)`;
 function draw(y) {
     if (y >= canvas_resize.height) {
-        y = 0;
-        
-        return;
-        
-        if (rendering === false) {
-            rendering = true;
-            console.time('render');
-            capturer.start();
-        }
-        else if (rendering === true && count > 1) {
-            console.timeEnd('render');
-            capturer.stop();
-            capturer.save();
-            rendering = null
-        }
-        console.log(rendering, count);
-        
+        y = -2;
+        // return;
+
+        // if (rendering === false) {
+        //     rendering = true;
+        //     capturer.start();
+        // }
+        // else if (rendering === true && count > 1) {
+        //     capturer.stop();
+        //     capturer.save();
+        //     rendering = null
+        // }
+
         count++;
     }
-    
-    requestAnimationFrame(() => { draw(y + 1) });
-    // ctx3.drawImage(canvas, 0, 0);
+
+    requestAnimationFrame(() => { setTimeout(draw(y + 1), 0) });
     ctx3.drawImage(canvas2, 0, 0);
-    capturer.capture(canvas3);
-    
+    if (rendering === true) capturer.capture(canvas3);
+
+    if (y < 0) return;
     let w = canvas_resize.width;
-    let h = canvas_resize.height;
 
     for (let x = 0; x < w; x++) {
-        // for (let y = 0; y < h; y++) {
-        let ray = mapped[y][x];
-        ctx2.beginPath();
-        ctx.moveTo(ray.x, ray.y);
-        ctx2.ellipse(ray.x + (x * (padding * 1.1)), ray.y + (y * padding), ray.rx, ray.ry, 0, 0, 2 * Math.PI, true);
-        ctx2.fillStyle = ray.color;
-        ctx2.fill();
-        ctx2.fill();
-        // }
-    }
-    
-    ctx2.filter = filter;
-    if (y % Math.round(canvas.height / steps) === 0) {
+        shadowMask(x, y);
     }
 
-    if (y % Math.round(canvas.height / (steps * 4)) === 0) {
-        ctx2.fillStyle = `rgba(0, 0, 0, ${1 / (steps * 6)})`;
-        // ctx2.fillRect(0, 0, canvas.width, canvas.height);
+    ctx2.fillStyle = `rgba(0, 0, 0, ${1 / (canvas_resize.height * 2)})`;
+    ctx2.fillRect(0, 0, canvas3.width, canvas3.height);
+}
+
+function shadowMask(x, y) {
+    let ray = mapped[y][x];
+    let intensinance = intensity * 2 * ray.luminance;
+    let offset = size / 3;
+
+    let size_y = size / 1.25
+    let size_x = (size / 4) - (offset / 4);
+    y = ray.y + ((x % 2) * (size / 2))
+    let r = size / 8;
+
+    ctx2.roundRect(ray.x, y, size_x, size_y, r)
+    ctx2.fillStyle = `rgb(${ray.r}, 0, 0)`;
+    for (let i = 0; i < intensinance; i++) {
+        ctx2.fill();
     }
 
+    ctx2.roundRect(ray.x + offset, y, size_x, size_y, r)
+    ctx2.fillStyle = `rgb(0, ${ray.g}, 0)`;
+    for (let i = 0; i < intensinance; i++) {
+        ctx2.fill();
+    }
+
+    ctx2.roundRect(ray.x + (offset * 2), y, size_x, size_y, r)
+    ctx2.fillStyle = `rgb(0, 0, ${ray.b})`;
+    for (let i = 0; i < intensinance; i++) {
+        ctx2.fill();
+    }
+}
+
+CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+    if (w < 2 * r) r = w / 2;
+    if (h < 2 * r) r = h / 2;
+    this.beginPath();
+    this.moveTo(x + r, y);
+    this.arcTo(x + w, y, x + w, y + h, r);
+    this.arcTo(x + w, y + h, x, y + h, r);
+    this.arcTo(x, y + h, x, y, r);
+    this.arcTo(x, y, x + w, y, r);
+    this.closePath();
 }
