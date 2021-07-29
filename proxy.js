@@ -14,7 +14,7 @@ app.get('/lospec/palettes', (req, res) => {
     }).pipe(res);
 });
 
-app.use(express.static('./'))
+app.use(express.static('./dist'))
 
 app.listen(420, () => {
     console.log(`@420`);
