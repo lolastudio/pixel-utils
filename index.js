@@ -4,7 +4,7 @@ let image_count = 0;
 let player_state = true;
 let options = {
     background: false,
-    dither: false
+    dither: true
 }
 let palette_limit = 24;
 let canvasRendererEl;
@@ -32,6 +32,10 @@ function renderGIF() {
 
 function renderWEBM() {
     getCanvas().renderWEBM();
+}
+
+function renderFrames() {
+    getCanvas().renderFrames();
 }
 
 function saveFrame() {
@@ -97,7 +101,8 @@ function drawApp() {
                 display: flex;
                 bottom: 2vh;
                 right: 2vh;
-                padding: 40px 30px;
+                padding: 0 30px 40px 30px;
+                z-index: 10;
             }
 
             .fixed-buttons-left {
@@ -233,14 +238,19 @@ function drawApp() {
         <div class="fixed-buttons-right">
             <options-button>
                 ${image_count > 1 ? html`<button @click=${renderGIF}>Export GIF</button>` : ''}
+                <button @click=${saveFrame}>Save Frame</button>
+                ${image_count > 1 ? html`<button @click=${renderFrames}>Export Frames</button>` : ''}
                 ${image_count > 1 ? html`<button @click=${renderWEBM}>Export WEBM</button>` : ''}
             </options-button>
-            <button @click=${saveFrame}>Save Frame</button>
         </div>
 
         <div class="floating-options">
-            <p class="${options.dither ? '__active' : ''}" @click=${() => toggle('dither')}>ordered dithering ${options.dither ? 'on' : 'off'}</p>
-            <p class="${!options.background ? '__active' : ''}" @click=${() => toggle('background')}>transparency ${!options.background ? 'on' : 'off'}</p>
+            <p title="the dithering will be applied only on quantized palettes" class="${options.dither ? '__active' : ''}" @click=${() => toggle('dither')}>
+                ordered dithering ${options.dither ? 'on' : 'off'}
+            </p>
+            <p title="exclude / include rgba alpha channel" class="${!options.background ? '__active' : ''}" @click=${() => toggle('background')}>
+                transparency ${!options.background ? 'on' : 'off'}
+            </p>
         </div>
 
         ` : html`<drop-area></drop-area>`}
@@ -256,6 +266,10 @@ window.addEventListener('click', evt => {
 
     if (evt.target.nodeName != 'FRAME-CONTROL') {
         document.querySelector('frame-control')?.onFPSInputKey(null, true);
+    }
+
+    if (evt.target.nodeName != 'OPTIONS-BUTTON') {
+        document.querySelector('options-button')?.disable();
     }
 })
 window.listen('updateApp', drawApp);

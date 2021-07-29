@@ -5,6 +5,7 @@ class OptionsButton extends LitElement {
 		super();
 
 		this.c = [];
+		this.disable = this.disable.bind(this);
 	}
 
 	static get styles() {
@@ -27,7 +28,7 @@ class OptionsButton extends LitElement {
 				height: 46px;
 				transition: all ease .2s;
 				outline: none;
-				width: 168px;
+				width: 196px;
 				padding-right: 28px;
 				transform: scale(1);
                 transition: all ease .2s;
@@ -40,19 +41,22 @@ class OptionsButton extends LitElement {
 
 			.menu {
 				position: absolute;
-				top: -46px;
+				// top: -46px;
 				background: #2e2549;
 				border-top-left-radius: 6px;
 				border-top-right-radius: 6px;
 				margin: 0px 10px;
-				width: 168px;
+				width: 196px;
 				height: 0;
 				opacity: 0;
+				bottom: 46px;
+				z-index: -1;
 			}
 
 			.menu.__active {
-				height: 60px;
+				height: auto;
 				opacity: 1;
+				z-index: 1;
 			}
 
 			.menu button {
@@ -104,7 +108,7 @@ class OptionsButton extends LitElement {
 
 	render() {
 		return html`
-			${this.c[0]}
+			${this.active_item}
 			<div class="chevron" @click=${this.toggle}>
 				<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-three-dots-vertical"
 					viewBox="0 0 16 16">
@@ -118,7 +122,12 @@ class OptionsButton extends LitElement {
 			</div>
 		`;
 	}
-	
+
+	disable() {
+		this.active = false;
+		this.requestUpdate();
+	}
+
 	toggle() {
 		this.active = !this.active;
 		this.requestUpdate();
@@ -127,16 +136,29 @@ class OptionsButton extends LitElement {
 	firstUpdated() {
 		console.log(this.children)
 		for (let e = 0; e < this.children.length; e++) {
+			this.children[e].addEventListener('click', () => { 
+				this.active = false;
+				this.changeActiveItem(e);
+			});
+			this.children[e].id = Math.random().toString(36);
 			this.c.push(this.children[e]);
 		}
 
+		this.active_item = this.c[0];
+		this.requestUpdate();
+	}
+
+	changeActiveItem(pos) {
+		this.active_item = this.c[pos];
 		this.requestUpdate();
 	}
 
 	getMenu() {
 		let ret = [];
-		for (let e = 1; e < this.c.length; e++) {
-			ret.push(this.c[e]);
+		for (let e = 0; e < this.c.length; e++) {
+			if (this.c[e].id !== this.active_item.id) {
+				ret.push(this.c[e]);
+			}
 		}
 		return ret;
 	}

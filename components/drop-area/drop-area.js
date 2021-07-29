@@ -61,7 +61,7 @@ class DropArea extends LitElement {
 	}
 
 	openUpload() {
-		if(!this.images.length) {
+		if (!this.images.length) {
 			this.shadowRoot.querySelector('input').click();
 		}
 	}
@@ -79,9 +79,8 @@ class DropArea extends LitElement {
 			this.images.push(this.newImage(src));
 		}
 
-		console.log(this.images)
-
-		window.on('drop', this.images);
+		window.on('drop', [...this.images]);
+		this.images = [];
 		this.requestUpdate();
 	}
 
