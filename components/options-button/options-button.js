@@ -134,7 +134,6 @@ class OptionsButton extends LitElement {
 	}
 
 	firstUpdated() {
-		console.log(this.children)
 		for (let e = 0; e < this.children.length; e++) {
 			this.children[e].addEventListener('click', () => { 
 				this.active = false;
