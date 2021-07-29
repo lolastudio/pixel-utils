@@ -6,7 +6,7 @@
     "lit-html",
     "lit-starter"
   ],
-  "version": "0.3.1",
+  "version": "0.4.0",
   "author": "roquef",
   "scripts": {
     "dev:all": "concurrently --kill-others \"npm run dev\" \"npm run server\"",
@@ -26,6 +26,8 @@
     "ccapture.js": "^1.1.0",
     "concurrently": "^6.0.0",
     "conjurate": "^0.6.0",
-    "es-dev-server": "^1.54.0"
+    "es-dev-server": "^1.54.0",
+    "jszip": "^3.7.0",
+    "worker-timers": "^7.0.33"
   }
 }

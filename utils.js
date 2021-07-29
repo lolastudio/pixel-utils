@@ -2,7 +2,7 @@ function getDate() {
     let date = new Date();
 
     let day = pad(date.getDate());
-    let month = pad(date.getMonth());
+    let month = pad(date.getMonth() + 1);
     let year = date.getFullYear();
 
     let hours = pad(date.getHours());
