@@ -15,7 +15,7 @@ class CanvasRenderer extends LitElement {
 		this.frame = 0, this.last_delta = 0;
 		this.fps = 12;
 		this.tpf = 1e3 / this.fps;
-		this.max_colors = 24;
+		this.max_colors = 2;
 		this.colorThief = new ColorThief();
 		this.skip_frames = 2;
 		this.active = true;
@@ -61,13 +61,32 @@ class CanvasRenderer extends LitElement {
 		]
 
 		this.bayer4 = [
-			[0, 8, 2, 10, 0],
-			[12, 4, 14, 6, 12],
-			[3, 11, 1, 9, 3],
-			[15, 7, 13, 5, 15]
+			[0, 8, 2, 10],
+			[12, 4, 14, 6],
+			[3, 11, 1, 9],
+			[15, 7, 13, 5]
 		];
 
-		this.bayer_size = 4;
+		this.bayer2 = [
+			[0, 2],
+			[3, 1]
+		]
+
+		this.tictac = [
+			[15, 5, 11, 10],
+			[6, 7, 2, 12],
+			[13, 1, 8, 3],
+			[9, 14, 4, 16],
+		]
+
+		this.dithering_indexes = {
+			tictac: this.tictac,
+			bayer2: this.bayer2,
+			bayer4: this.bayer4,
+			bayer8: this.bayer8
+		}
+
+		this.selectDitheringMatrix('tictac');
 	}
 
 	static get styles() {
@@ -103,6 +122,16 @@ class CanvasRenderer extends LitElement {
 				right: 0;
 			}
 		`;
+	}
+
+	selectDitheringMatrix(id) {
+		this.dithering_index_id = id;
+		this.selected_matrix = this.dithering_indexes[id];
+		this.bayer_size = this.selected_matrix.length;
+	}
+
+	getDitheringId() {
+		return this.dithering_index_id;
 	}
 
 	setImages(images) {
@@ -176,33 +205,34 @@ class CanvasRenderer extends LitElement {
 		if (this.quantized && !this.transformed[img.id].quantized && !this.quantizing_queue[img.id]) {
 			this.quantizing_queue[img.id] = true;
 			let data = this.tmpctx.getImageData(0, 0, img.width, img.height).data;
+			let b_size2 = this.bayer_size * this.bayer_size;
+			let ratio = 3;
 
 			for (let y = 0; y < img.height; ++y) {
 				for (let x = 0; x < img.width; ++x) {
 					let index = (y * img.width + x) * 4;
 					let [r, g, b, a] = [data[index], data[index + 1], data[index + 2], data[index + 3]];
 
-					if (!this.dither) {
-						[r, g, b] = this.getQuantized(r, g, b);
-						this.transformed[img.id].data[index] = r;
-						this.transformed[img.id].data[index + 1] = g;
-						this.transformed[img.id].data[index + 2] = b;
-						this.transformed[img.id].data[index + 3] = a;
-					}
-					else {
-						let map = this.bayer4[x % this.bayer_size][y % this.bayer_size];
-						r = +r + map;
-						g = +g + map;
-						b = +b + map;
+					if (this.dither) {
+						let col = x % this.bayer_size;
+						let row = y % this.bayer_size
+						let map = this.selected_matrix[col][row];
+						let value = (1 / b_size2) * (map + 1);
+						// map = 254 * value;
 
-						[r, g, b] = this.getQuantized(r, g, b);
-
-						this.transformed[img.id].data[index] = r;
-						this.transformed[img.id].data[index + 1] = g;
-						this.transformed[img.id].data[index + 2] = b;
-						this.transformed[img.id].data[index + 3] = a;
+						r += map * ratio;
+						r = r > 255 ? 255 : r;
+						g += map * ratio;
+						g = g > 255 ? 255 : g;
+						b += map * ratio;
+						b = b > 255 ? 255 : b;
 					}
 
+					[r, g, b] = this.getQuantized(r, g, b);
+					this.transformed[img.id].data[index] = r;
+					this.transformed[img.id].data[index + 1] = g;
+					this.transformed[img.id].data[index + 2] = b;
+					this.transformed[img.id].data[index + 3] = a;
 				}
 			}
 
@@ -295,17 +325,18 @@ class CanvasRenderer extends LitElement {
 	}
 
 	getQuantized(r, g, b) {
-		let key = [r, g, b].join(',');
-		let mapped = this.colorMap[key];
+		let mkey = [r, g, b].join(',');
+		let mapped = this.colorMap[mkey];
 
 		if (!mapped) {
 			let scores = {};
 			for (let i = 0; i < this.max_colors; i++) {
 				let q = this.colors_ordered[i].array_color;
 				scores[this.colors_ordered[i].color] = ciede2000({ r, g, b }, { r: +q[0], g: +q[1], b: +q[2] });
+				// scores[this.colors_ordered[i].color] = deltaE([r, g, b], [+q[0], +q[1], +q[2]]);
 			}
 
-			let quantized = { color: [r, g, b].join(','), total: Infinity };
+			let quantized = { color: mkey, total: Infinity };
 			for (let key in scores) {
 				if (scores[key] < quantized.total) {
 					quantized = { color: key, total: scores[key] };
@@ -313,7 +344,7 @@ class CanvasRenderer extends LitElement {
 			}
 
 			let split = quantized.color.split(',');
-			this.colorMap[key] = split;
+			this.colorMap[mkey] = split;
 			return split;
 		}
 		else {
@@ -381,11 +412,12 @@ class CanvasRenderer extends LitElement {
 
 				this.mime.split('webm').length > 1 && this.capturer.capture(this.canvas);
 				this.capturer.stop();
+
 				this.capturer.save((blob) => {
-					window.hideLoader();
 					download(blob, this.capturer_options.name + (this.mime.split('webm').length > 1 ? '.webm' : ''), this.mime);
 					this.stopped = false;
 					window.requestAnimationFrame(this.animate);
+					window.hideLoader();
 				});
 
 				// this.capturer.save();
@@ -560,5 +592,39 @@ class CanvasRenderer extends LitElement {
 }
 
 customElements.define('canvas-renderer', CanvasRenderer);
+
+function deltaE(rgbA, rgbB) {
+	let labA = rgb2lab(rgbA);
+	let labB = rgb2lab(rgbB);
+	let deltaL = labA[0] - labB[0];
+	let deltaA = labA[1] - labB[1];
+	let deltaB = labA[2] - labB[2];
+	let c1 = Math.sqrt(labA[1] * labA[1] + labA[2] * labA[2]);
+	let c2 = Math.sqrt(labB[1] * labB[1] + labB[2] * labB[2]);
+	let deltaC = c1 - c2;
+	let deltaH = deltaA * deltaA + deltaB * deltaB - deltaC * deltaC;
+	deltaH = deltaH < 0 ? 0 : Math.sqrt(deltaH);
+	let sc = 1.0 + 0.045 * c1;
+	let sh = 1.0 + 0.015 * c1;
+	let deltaLKlsl = deltaL / (1.0);
+	let deltaCkcsc = deltaC / (sc);
+	let deltaHkhsh = deltaH / (sh);
+	let i = deltaLKlsl * deltaLKlsl + deltaCkcsc * deltaCkcsc + deltaHkhsh * deltaHkhsh;
+	return i < 0 ? 0 : Math.sqrt(i);
+}
+
+function rgb2lab(rgb) {
+	let r = rgb[0] / 255, g = rgb[1] / 255, b = rgb[2] / 255, x, y, z;
+	r = (r > 0.04045) ? Math.pow((r + 0.055) / 1.055, 2.4) : r / 12.92;
+	g = (g > 0.04045) ? Math.pow((g + 0.055) / 1.055, 2.4) : g / 12.92;
+	b = (b > 0.04045) ? Math.pow((b + 0.055) / 1.055, 2.4) : b / 12.92;
+	x = (r * 0.4124 + g * 0.3576 + b * 0.1805) / 0.95047;
+	y = (r * 0.2126 + g * 0.7152 + b * 0.0722) / 1.00000;
+	z = (r * 0.0193 + g * 0.1192 + b * 0.9505) / 1.08883;
+	x = (x > 0.008856) ? Math.pow(x, 1 / 3) : (7.787 * x) + 16 / 116;
+	y = (y > 0.008856) ? Math.pow(y, 1 / 3) : (7.787 * y) + 16 / 116;
+	z = (z > 0.008856) ? Math.pow(z, 1 / 3) : (7.787 * z) + 16 / 116;
+	return [(116 * y) - 16, 500 * (x - y), 200 * (y - z)]
+}
 
 export default CanvasRenderer;

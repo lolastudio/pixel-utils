@@ -6,7 +6,7 @@ let options = {
     background: false,
     dither: true
 }
-let palette_limit = 24;
+let palette_limit = 2;
 let canvasRendererEl;
 
 function getCanvas() {
@@ -65,6 +65,14 @@ function paletteLimit(value) {
     palette_limit = palette_limit >= 2 ? palette_limit : 2;
     getCanvas().setPaletteLimit(palette_limit);
     drawApp();
+}
+
+function checkDither(id) {
+    return id == getCanvas().getDitheringId();
+}
+
+function changeDither(value) {
+
 }
 
 function drawApp() {
@@ -245,8 +253,17 @@ function drawApp() {
         </div>
 
         <div class="floating-options">
-            <p title="the dithering will be applied only on quantized palettes" class="${options.dither ? '__active' : ''}" @click=${() => toggle('dither')}>
-                ordered dithering ${options.dither ? 'on' : 'off'}
+            <p title="the dithering will be applied only on quantized palettes" class="${checkDither('bayer2') ? '__active' : ''}" @click=${() => changeDither('bayer2')}>
+                ordered 2x2 dithering ${checkDither('bayer2') ? 'on' : 'off'}
+            </p>
+            <p title="the dithering will be applied only on quantized palettes" class="${checkDither('bayer4') ? '__active' : ''}" @click=${() => changeDither('bayer4')}>
+                ordered 4x4 dithering ${checkDither('bayer4') ? 'on' : 'off'}
+            </p>
+            <p title="the dithering will be applied only on quantized palettes" class="${checkDither('bayer8') ? '__active' : ''}" @click=${() => changeDither('bayer8')}>
+                ordered 8x8 dithering ${checkDither('bayer8') ? 'on' : 'off'}
+            </p>
+            <p title="the dithering will be applied only on quantized palettes" class="${checkDither('tictac') ? '__active' : ''}" @click=${() => changeDither('tictac')}>
+                tictac dithering by <a href="https://twitter.com/_Ash_Cruz" target="_blank">@_Ash_Cruz</a> ${checkDither('tictac') ? 'on' : 'off'}
             </p>
             <p title="exclude / include rgba alpha channel" class="${!options.background ? '__active' : ''}" @click=${() => toggle('background')}>
                 transparency ${!options.background ? 'on' : 'off'}

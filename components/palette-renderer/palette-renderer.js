@@ -7,7 +7,6 @@ class PaletteRenderer extends LitElement {
 		this.palette = [];
 
 		window.listen('palette_change', (palette) => { 
-			console.log(palette)
 			this.palette = palette;
 			this.requestUpdate();
 		});

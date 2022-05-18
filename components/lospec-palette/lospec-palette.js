@@ -5,6 +5,7 @@ class LospecPalette extends LitElement {
 		super();
 		this.page = 0;
 		this.active = false;
+		this.url = 'https://pixelutils.lolastud.io'
 
 		this.getPalette();
 		this.toggle = this.toggle.bind(this);
@@ -154,7 +155,7 @@ class LospecPalette extends LitElement {
 	}
 
 	getPalette() {
-		fetch(`https://pixelutils.lolastud.io/lospec/palettes?colorNumberFilterType=min&page=${this.page}&tag=&sortingType=default&colorNumber=0`).then(res => {
+		fetch(`${this.url}/lospec/palettes?colorNumberFilterType=min&page=${this.page}&tag=&sortingType=default&colorNumber=0`).then(res => {
 			res.json().then(data => {
 				this.palettes = data;
 				this.total_pages = Math.ceil(data.totalCount / data.palettes.length);
@@ -205,7 +206,6 @@ class LospecPalette extends LitElement {
 
 	setPalette(palette) {
 		this.selected = palette;
-		console.log(palette);
 		palette.rgbaArray = [];
 		for (let color of palette.colorsArray) {
 			color = this.hexToRgbA(color);
