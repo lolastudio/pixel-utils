@@ -8,7 +8,6 @@ var cache = {};
 app.get('/lospec/palettes', (req, res) => {
     let url = 'https://lospec.com/palette-list/load?' + query2string(req.query);
     cache[url] ? res.send(cache[url]) : request.get(url, (err, res, body) => {
-        console.log(err, body);
         try {
             cache[url] = JSON.parse(body);
         } catch(err) { }

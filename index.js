@@ -72,7 +72,13 @@ function checkDither(id) {
 }
 
 function changeDither(value) {
+    getCanvas().selectDitheringMatrix(value);
+    getCanvas().setPalette(getCanvas().palette);
+    drawApp();
+}
 
+function getDitheringRatio() {
+    return getCanvas().ditheringRatio;
 }
 
 function drawApp() {
@@ -262,9 +268,12 @@ function drawApp() {
             <p title="the dithering will be applied only on quantized palettes" class="${checkDither('bayer8') ? '__active' : ''}" @click=${() => changeDither('bayer8')}>
                 ordered 8x8 dithering ${checkDither('bayer8') ? 'on' : 'off'}
             </p>
-            <p title="the dithering will be applied only on quantized palettes" class="${checkDither('tictac') ? '__active' : ''}" @click=${() => changeDither('tictac')}>
+            <p style="margin-bottom: 16px;" title="the dithering will be applied only on quantized palettes" class="${checkDither('tictac') ? '__active' : ''}" @click=${() => changeDither('tictac')}>
                 tictac dithering by <a href="https://twitter.com/_Ash_Cruz" target="_blank">@_Ash_Cruz</a> ${checkDither('tictac') ? 'on' : 'off'}
             </p>
+
+            <p class="__active" style="margin-bottom: 16px;">dithering ratio: ${getDitheringRatio()}</p>
+
             <p title="exclude / include rgba alpha channel" class="${!options.background ? '__active' : ''}" @click=${() => toggle('background')}>
                 transparency ${!options.background ? 'on' : 'off'}
             </p>

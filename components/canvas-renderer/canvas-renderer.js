@@ -33,6 +33,7 @@ class CanvasRenderer extends LitElement {
 		this.setDither = this.setDither.bind(this);
 		this.animate = this.animate.bind(this);
 		this.renderFrames = this.renderFrames.bind(this);
+		this.selectDitheringMatrix = this.selectDitheringMatrix.bind(this);
 
 		this.quantizing_queue = {};
 
@@ -48,6 +49,7 @@ class CanvasRenderer extends LitElement {
 		window.listen('dither_change', this.setDither);
 
 		this.dither = true;
+		this.ratio = 4;
 
 		this.bayer8 = [
 			[0, 32, 8, 40, 2, 34, 10, 42],
@@ -124,6 +126,10 @@ class CanvasRenderer extends LitElement {
 		`;
 	}
 
+	get ditheringRatio() {
+		return this.ratio;
+	}
+
 	selectDitheringMatrix(id) {
 		this.dithering_index_id = id;
 		this.selected_matrix = this.dithering_indexes[id];
@@ -148,6 +154,9 @@ class CanvasRenderer extends LitElement {
 			this.setFPS(this.images.length);
 			window.on('fps_change', this.fps);
 		}
+		if (this.images.length == 1) {
+			this.setPlayerState(false);
+		}
 		window.on('updateApp');
 
 		this.animate(this.last_delta, true);
@@ -161,6 +170,10 @@ class CanvasRenderer extends LitElement {
 
 	setSkip(skip) {
 		this.skip_frames = skip;
+	}
+
+	setDitheringRatio(ratio) {
+		this.ratio = ratio;
 	}
 
 	render() {
@@ -205,8 +218,6 @@ class CanvasRenderer extends LitElement {
 		if (this.quantized && !this.transformed[img.id].quantized && !this.quantizing_queue[img.id]) {
 			this.quantizing_queue[img.id] = true;
 			let data = this.tmpctx.getImageData(0, 0, img.width, img.height).data;
-			let b_size2 = this.bayer_size * this.bayer_size;
-			let ratio = 3;
 
 			for (let y = 0; y < img.height; ++y) {
 				for (let x = 0; x < img.width; ++x) {
@@ -214,18 +225,14 @@ class CanvasRenderer extends LitElement {
 					let [r, g, b, a] = [data[index], data[index + 1], data[index + 2], data[index + 3]];
 
 					if (this.dither) {
-						let col = x % this.bayer_size;
-						let row = y % this.bayer_size
-						let map = this.selected_matrix[col][row];
-						let value = (1 / b_size2) * (map + 1);
-						// map = 254 * value;
+						let map = this.selected_matrix[x % this.bayer_size][y % this.bayer_size];
 
-						r += map * ratio;
-						r = r > 255 ? 255 : r;
-						g += map * ratio;
-						g = g > 255 ? 255 : g;
-						b += map * ratio;
-						b = b > 255 ? 255 : b;
+						r += map * this.ratio;
+						r -= r >> 8;
+						g += map * this.ratio;
+						g -= g >> 8;
+						b += map * this.ratio;
+						b -= b >> 8;
 					}
 
 					[r, g, b] = this.getQuantized(r, g, b);
