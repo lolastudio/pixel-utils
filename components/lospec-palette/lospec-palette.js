@@ -5,7 +5,7 @@ class LospecPalette extends LitElement {
 		super();
 		this.page = 0;
 		this.active = false;
-		this.url = 'http://localhost:420';
+		this.url = 'https://pixelutils.lolastud.io';
 
 		this.getPalette();
 		this.toggle = this.toggle.bind(this);

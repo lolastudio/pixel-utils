@@ -6,7 +6,7 @@
     "lit-html",
     "lit-starter"
   ],
-  "version": "0.5.0",
+  "version": "1.0.0",
   "author": "roquef",
   "scripts": {
     "dev:all": "concurrently --kill-others \"npm run dev\" \"npm run server\"",
