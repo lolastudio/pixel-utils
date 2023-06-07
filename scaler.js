@@ -1,3 +1,5 @@
+import * as workerTimers from '/node_modules/worker-timers/build/es2019/module.js';
+
 let size = 4;
 let canvas = document.createElement('canvas');
 let ctx = canvas.getContext('2d');
@@ -17,16 +19,19 @@ var capturer = new CCapture({
     motionBlurFrames: 1
 });
 let padding_y = 1.25;
-let padding_x = 1;
+let padding_x = 1.25;
 
 let img = new Image();
 let intensity = 4;
+let blur_value = 2;
 
 window.listen('drop', (images) => {
     document.body.querySelector('drop-area').remove();
     img = images[0];
     size = +window.prompt('phosphor size') || 8;
     intensity = +window.prompt('phosphor intensity') || 2;
+    blur_value = +window.prompt('blur') || 2;
+
     img.onload = () => {
         canvas.width = img.width;
         canvas.height = img.height;
@@ -62,7 +67,7 @@ function mapRays() {
     for (let y = 0; y < canvas_resize.height; ++y) {
         for (let x = 0; x < canvas_resize.width; ++x) {
             let index = (y * canvas_resize.width + x) * 4;
-            let [r, g, b, a] = [data[index], data[index + 1], data[index + 2], data[index + 3]];
+            let [r, g, b, a] = [data[index], data[index + 1], data[index + 2] / 1.75, data[index + 3]];
             let luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
             let radius = (size / 2) + ((luminance / 255));
             if (!mapped[y]) mapped[y] = {}
@@ -73,8 +78,8 @@ function mapRays() {
                 x: (x * (size)) + (x * padding_x),
                 y: (y * (size)) + (y * padding_y),
                 radius,
-                color: `rgb(${r}, ${g}, ${b / 2})`,
-                r: r, g: g, b: b / 2,
+                color: `rgb(${r}, ${g}, ${b})`,
+                r: r, g: g, b: b,
                 luminance: luminance / (255)
                 // color: 'rgb(255,255,255)'
             }
@@ -89,7 +94,7 @@ function mapRays() {
 
 let steps = 8;
 let count = 0;
-let filter = `contrast(1.2) brightness(1.2) saturate(1.2) blur(${size / 2.75}px) hue-rotate(10deg)`;
+let filter = `contrast(1.2) brightness(1.2) saturate(1.2) blur(${blur_value}px) hue-rotate(10deg)`;
 function draw(y) {
     if (y >= canvas_resize.height) {
         y = -2;
@@ -108,7 +113,7 @@ function draw(y) {
         count++;
     }
 
-    requestAnimationFrame(() => { setTimeout(draw(y + 1), 0) });
+    workerTimers.setTimeout(() => { draw(y + 1) }, 0);
     ctx3.drawImage(canvas2, 0, 0);
     if (rendering === true) capturer.capture(canvas3);
 
@@ -126,12 +131,14 @@ function draw(y) {
 function shadowMask(x, y) {
     let ray = mapped[y][x];
     let intensinance = intensity * 2 * ray.luminance;
-    let offset = size / 3;
+    let offset = size / 4;
 
     let size_y = size / 1.25
     let size_x = (size / 4) - (offset / 4);
     y = ray.y + ((x % 2) * (size / 2))
     let r = size / 8;
+
+    // console.log(ray, offset, offset * 2, size_x, size_y)
 
     ctx2.roundRect(ray.x, y, size_x, size_y, r)
     ctx2.fillStyle = `rgb(${ray.r}, 0, 0)`;

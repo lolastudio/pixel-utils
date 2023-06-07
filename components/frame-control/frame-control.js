@@ -337,7 +337,6 @@ class FrameControl extends LitElement {
 		this.editing_fps = true;
 		 this.requestUpdate();
 		setTimeout(() => {
-			console.log(this.shadowRoot.querySelector('.fps-text').children);
 			this.shadowRoot.querySelector('.fps-text input').focus()
 		}, 0)
 	}

@@ -5,6 +5,7 @@ class LospecPalette extends LitElement {
 		super();
 		this.page = 0;
 		this.active = false;
+		this.url = 'https://pixelutils.lolastud.io';
 
 		this.getPalette();
 		this.toggle = this.toggle.bind(this);
@@ -107,6 +108,24 @@ class LospecPalette extends LitElement {
 				font-size: 14px;
 			}
 
+			:host .description {
+				text-decoration: none;
+				color: #fffbd1;
+				font-size: 14px;
+				font-weight: 300;
+    			font-size: 12px;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				display: -webkit-box;
+				-webkit-line-clamp: 2;
+						line-clamp: 2; 
+				-webkit-box-orient: vertical;
+			}
+
+			:host .description a {
+				color: #fffbd1;
+			}
+
 			:host a.user:hover {
 				text-decoration: underline;	
 			}
@@ -119,7 +138,7 @@ class LospecPalette extends LitElement {
 			
 			:host .item:hover {
 				cursor: pointer;
-				padding-left: 20px;
+				padding-left: 18px;
 				transition: .2s ease all;
 				transition-delay: .05s;
 			}
@@ -154,7 +173,7 @@ class LospecPalette extends LitElement {
 	}
 
 	getPalette() {
-		fetch(`https://pixelutils.lolastud.io/lospec/palettes?colorNumberFilterType=min&page=${this.page}&tag=&sortingType=default&colorNumber=0`).then(res => {
+		fetch(`${this.url}/lospec/palettes?colorNumberFilterType=min&page=${this.page}&tag=&sortingType=default&colorNumber=0`).then(res => {
 			res.json().then(data => {
 				this.palettes = data;
 				this.total_pages = Math.ceil(data.totalCount / data.palettes.length);
@@ -170,17 +189,21 @@ class LospecPalette extends LitElement {
 
 	getList() {
 		if (this.palettes) {
+			console.log(this.palettes);
 			let palettes = this.palettes.palettes;
 			let ret = []
 			for (let palette of palettes) {
+				var parser = new DOMParser();
+				var doc = parser.parseFromString(palette.description, 'text/html');
 				ret.push(html`
-					<div class="item ${this.selected?._id == palette._id ? 'active' : ''}" @click=${() => { this.setPalette(palette) }}>
+					<div class="item ${this.selected?._id == palette._id ? 'active' : ''}" @click=${()=> { this.setPalette(palette) }}>
 						<div class="color-preview">
 							${palette.colorsArray.map(color => html`<div class="color-preview-box" style="background: #${color};"></div>`)}
 						</div>
 						<p>${palette.title} (${palette.colorsArray.length} colors)</p>
 						<a title="Visit ${palette.user?.name} profile on lospec" class="user"
 							href="https://lospec.com/${palette.user?.slug}" target="_blank">by ${palette.user?.name}</a>
+						<p class="description" title="${palette.description}">${this.renderDescription(doc.body)}</p>
 					</div>
 				`)
 			}
@@ -189,15 +212,27 @@ class LospecPalette extends LitElement {
 		}
 	}
 
+	renderDescription(body) {
+		let ret = [];
+
+		for(let item of body.childNodes) {
+			if(item.nodeName == 'A') item.target = '_blank';
+			ret.push(html`${item}`);
+		}
+
+		console.log(ret);
+		return html`${ret}`;
+	}
+
 	getPagination() {
 		let actual = this.page + 1;
 		let total = new Array(this.total_pages);
 		let ret = [];
 
-		if (actual > 1) { ret.push(html`<div class="page" @click=${() => { this.setPage(this.page - 1) }}>${actual - 1}</div>`); }
+		if (actual > 1) { ret.push(html`<div class="page" @click=${()=> { this.setPage(this.page - 1) }}>${actual - 1}</div>`); }
 
 		for (let i = actual; i <= actual + 5; i++) {
-			ret.push(html`<div class="page ${i == actual ? 'active' : ''}" @click=${() => { this.setPage(i - 1) }}>${i}</div>`);
+			ret.push(html`<div class="page ${i == actual ? 'active' : ''}" @click=${()=> { this.setPage(i - 1) }}>${i}</div>`);
 		}
 
 		return ret;
@@ -205,7 +240,6 @@ class LospecPalette extends LitElement {
 
 	setPalette(palette) {
 		this.selected = palette;
-		console.log(palette);
 		palette.rgbaArray = [];
 		for (let color of palette.colorsArray) {
 			color = this.hexToRgbA(color);

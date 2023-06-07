@@ -7,7 +7,6 @@ class PaletteRenderer extends LitElement {
 		this.palette = [];
 
 		window.listen('palette_change', (palette) => { 
-			console.log(palette)
 			this.palette = palette;
 			this.requestUpdate();
 		});
@@ -51,7 +50,7 @@ class PaletteRenderer extends LitElement {
 	getPalette() {
 		let ret = []
 		for(let color of this.palette) {
-			ret.push(html`<div class="item" style="background: rgb(${color});"></div>`);
+			ret.push(html`<div class="item" title="rgb(${color})" style="background: rgb(${color});"></div>`);
 		}
 		return ret;
 	}

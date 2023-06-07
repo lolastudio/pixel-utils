@@ -4,7 +4,7 @@ const app = express();
 
 app.use(require('cors')());
 
-const cache = {};
+var cache = {};
 app.get('/lospec/palettes', (req, res) => {
     let url = 'https://lospec.com/palette-list/load?' + query2string(req.query);
     cache[url] ? res.send(cache[url]) : request.get(url, (err, res, body) => {
@@ -27,3 +27,7 @@ function query2string(query) {
     }
     return str.substring(0, str.length - 1);
 }
+
+setInterval(() => {
+    cache = {};
+}, 1e3 * 60 * 60 * 48);
